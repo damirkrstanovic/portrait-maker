@@ -26,6 +26,7 @@ export function CatalogBrowser({ api, onImport, refreshKey = 0 }: { api: Library
   const savedPreferences = loadCatalogPreferences();
   const [query, setQuery] = useState<Query>(initialQuery);
   const [facets, setFacets] = useState<CatalogFacets>(emptyFacets);
+  const [zoom, setZoom] = useState(savedPreferences.gridZoom);
   const [role, setRole] = useState<Role>(savedPreferences.gridRole);
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [previewVisible, setPreviewVisible] = useState(savedPreferences.previewVisible);
@@ -213,7 +214,7 @@ export function CatalogBrowser({ api, onImport, refreshKey = 0 }: { api: Library
   return <section className={`catalog-layout${previewVisible && focusedPortrait ? " is-preview-visible" : ""}`}>
     <FilterSidebar facets={facets} query={query} onQuery={setQuery} />
     <div className="catalog-main">
-      <div className="catalog-controls"><SearchBar text={query.text} total={page?.total ?? 0} role={role} previewVisible={previewVisible && !!focusedPortrait} previewAvailable={!!focusedPortrait} onTogglePreview={() => previewVisible ? closePreview() : focusPortrait(focusedPortrait!.id)} onText={(text) => setQuery({ ...query, text })} onRole={(next) => { setRole(next); saveCatalogPreferences({ gridRole: next }); void api.setDisplayRole?.(next); }} />
+      <div className="catalog-controls"><SearchBar zoom={zoom} onZoom={(next) => { setZoom(next); saveCatalogPreferences({ gridZoom: next }); }} text={query.text} total={page?.total ?? 0} role={role} previewVisible={previewVisible && !!focusedPortrait} previewAvailable={!!focusedPortrait} onTogglePreview={() => previewVisible ? closePreview() : focusPortrait(focusedPortrait!.id)} onText={(text) => setQuery({ ...query, text })} onRole={(next) => { setRole(next); saveCatalogPreferences({ gridRole: next }); void api.setDisplayRole?.(next); }} />
       {!query.trash && api.changeSelection ? <SelectionToolbar query={query} matchingCount={page?.total ?? 0} selectedCount={currentSelectionCount} changeSelection={api.changeSelection} onChanged={refreshMutations} /> : null}
       {!query.trash && currentSelectionCount !== null && currentSelectionCount > 0 && api.trashPortraits ? <button type="button" className="trash-selected" onClick={moveSelectionToTrash}>Move {currentSelectionCount.toLocaleString()} selected to trash</button> : null}
       {!query.trash && currentSelectionCount !== null && currentSelectionCount > 0 && api.editMetadata ? <button ref={bulkEditTrigger} type="button" className="edit-selected" onClick={() => void editPersistedSelection()}>Edit {currentSelectionCount} selected</button> : null}
@@ -221,7 +222,7 @@ export function CatalogBrowser({ api, onImport, refreshKey = 0 }: { api: Library
       {trashCountError ? <p className="catalog-mutation-error" role="alert">{trashCountError}</p> : null}
       {mutationError ? <p className="catalog-mutation-error" role="alert">{mutationError}</p> : null}
       {page?.total === 0 && !catalog.pending && !catalog.error ? <button className="primary-action empty-import" type="button" onClick={onImport}>Import portraits</button> : null}
-      <PortraitGrid items={displayItems} total={page?.total ?? 0} role={role} loading={catalog.loading} queryPending={catalog.pending} error={catalog.error} assetUrl={(id, currentRole) => assetUrl(id, currentRole)} onFocus={focusPortrait} onToggleSelection={query.trash ? (id, marked) => setTrashMarked((current) => { const next = new Set(current); if (marked) next.add(id); else next.delete(id); return next; }) : toggleSelection} selectionLabel={query.trash ? (portrait) => `Mark ${portrait.name} for trash action` : undefined} />
+      <PortraitGrid zoom={zoom} items={displayItems} total={page?.total ?? 0} role={role} loading={catalog.loading} queryPending={catalog.pending} error={catalog.error} assetUrl={(id, currentRole) => assetUrl(id, currentRole)} onFocus={focusPortrait} onToggleSelection={query.trash ? (id, marked) => setTrashMarked((current) => { const next = new Set(current); if (marked) next.add(id); else next.delete(id); return next; }) : toggleSelection} selectionLabel={query.trash ? (portrait) => `Mark ${portrait.name} for trash action` : undefined} />
       {page && page.total > 200 ? <nav className="catalog-pages" aria-label="Catalog pages"><button type="button" onClick={() => catalog.setOffset(catalog.offset - 200)} disabled={catalog.offset === 0}>Previous page</button><span>Page {pageNumber} of {pageCount}</span><button type="button" onClick={() => catalog.setOffset(catalog.offset + 200)} disabled={catalog.offset + 200 >= page.total}>Next page</button></nav> : null}
     </div>
     <PortraitPreview portrait={focusedPortrait} visible={previewVisible} assetUrl={assetUrl} onClose={closePreview} onNavigate={navigatePreview} editMetadata={api.editMetadata} renameSource={api.renameSource} onMetadataSaved={() => refreshMutations()} />

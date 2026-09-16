@@ -16,11 +16,16 @@ if (!existsSync(frontend)) throw new Error(`frontend directory does not exist: $
 const report = {
   artifact,
   platform: process.platform,
-  frontendHasNetworkReference: findTextFiles(frontend).some((path) => /https?:\/\//i.test(readFileSync(path, 'utf8'))),
+  frontendHasRemoteAssetReference: findTextFiles(frontend).some((path) => {
+    // JavaScript contains inert React documentation and SVG namespace URLs.
+    // Check loadable HTML/CSS resources; the app CSP controls runtime requests.
+    if (!/\.(?:css|html)$/i.test(path)) return false;
+    return /(?:\b(?:src|href)\s*=\s*["']|url\(\s*["']?|@import\s*["'])(?:https?:)?\/\//i.test(readFileSync(path, 'utf8'));
+  }),
   dependencyInspection: inspectDependencies(artifact),
 };
-if (report.frontendHasNetworkReference) {
-  throw new Error(`frontend bundle contains an http(s) reference; see ${frontend}`);
+if (report.frontendHasRemoteAssetReference) {
+  throw new Error(`frontend bundle loads a remote HTML/CSS resource; see ${frontend}`);
 }
 if (process.platform === 'linux' && report.dependencyInspection.output.includes('libarchive.so')) {
   throw new Error('release executable dynamically depends on system libarchive');

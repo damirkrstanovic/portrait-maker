@@ -16,11 +16,11 @@ Linux was verified on 2026-09-16 with libarchive 3.8.9 discovered through `pkg-c
 
 ## Release build configuration
 
-`crates/portrait-core/build.rs` requires libarchive 3.8.9 or newer through `pkg-config` on Unix development builds and through vcpkg for MSVC builds. `packaging/libarchive/CMakeLists.txt` pins release-source builds to libarchive `v3.8.9`, disables its command-line programs and tests, and builds a static library. CMake presets cover Linux x86-64, Windows x64 with the `x64-windows-static-md` vcpkg triplet, and both macOS architectures. Release CI must build both macOS presets and combine the resulting libraries into the application’s universal package.
+`crates/portrait-core/build.rs` requires libarchive 3.8.9 or newer through `pkg-config` on Unix development builds and through vcpkg for MSVC builds. `packaging/libarchive/CMakeLists.txt` pins release-source builds to libarchive `v3.8.9`, disables its command-line programs and tests, and builds a static library. It accepts CMake 3.22, which is available on the Ubuntu 22.04 Linux release-build baseline. CMake presets cover Linux x86-64, Windows x64 with the `x64-windows-static-md` vcpkg triplet, and both macOS architectures. The CI matrix builds a native package candidate per runner; it does not yet produce a universal macOS binary.
 
 The release build must retain ZIP deflate support and the LZMA, bzip2, zstd, and crypto libraries selected by libarchive for the tested 7z/RAR codecs. Static linking is preferred. If an AppImage uses shared libraries, Task 13 must bundle the pinned `libarchive.so` and its codec dependencies with an app-relative rpath, then test on a host without system libarchive.
 
-Windows and macOS are configured targets, but they have not been built or run on this Linux host. Native package verification remains required before release. Task 13 owns packaged-app dependency inspection, codesigning, and the no-system-libarchive smoke test.
+Windows and macOS are configured targets, but they have not been built or run on this Linux host. Native package verification remains required before release. The GitHub Actions workflow produces candidate artifacts on their native runners; published Windows and macOS releases still need package inspection, no-system-libarchive smoke testing, and platform signing/notarization.
 
 ## Supported and rejected input
 

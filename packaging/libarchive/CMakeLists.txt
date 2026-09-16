@@ -1,7 +1,13 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.22)
 project(portrait_manager_libarchive LANGUAGES C)
 
 include(FetchContent)
+
+# CMP0135 appeared after the Ubuntu 22.04 CMake baseline.  Newer CMake
+# versions need it set explicitly when extracting a pinned URL dependency.
+if(POLICY CMP0135)
+  cmake_policy(SET CMP0135 NEW)
+endif()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "Build PIC objects for the Tauri cdylib" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build a static libarchive" FORCE)
@@ -29,6 +35,5 @@ FetchContent_Declare(
   libarchive
   URL https://github.com/libarchive/libarchive/releases/download/v3.8.9/libarchive-3.8.9.tar.xz
   URL_HASH SHA256=888c934f9d95648ecb9163dc8e23ab80a476ecb81a8f1154704a227b5b676dde
-  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 FetchContent_MakeAvailable(libarchive)

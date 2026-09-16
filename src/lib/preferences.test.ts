@@ -17,7 +17,7 @@ beforeEach(() => {
 afterEach(() => stored.clear());
 
 test("remembers preview visibility and the grid role locally", () => {
-  saveCatalogPreferences({ previewVisible: false, gridRole: "small" });
+  saveCatalogPreferences({ previewVisible: false, gridRole: "small", gridZoom: 150 });
 
-  expect(loadCatalogPreferences()).toEqual({ previewVisible: false, gridRole: "small" });
+  expect(loadCatalogPreferences()).toEqual({ previewVisible: false, gridRole: "small", gridZoom: 150 });
 });

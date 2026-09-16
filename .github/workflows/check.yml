@@ -62,6 +62,8 @@ jobs:
       - run: cargo clippy --locked --workspace --all-targets -- -D warnings
       - run: cargo test --locked --workspace
       - name: Build native bundle artifacts
+        env:
+          NO_STRIP: "1"
         run: npm run tauri -- build --bundles ${{ matrix.bundle }} --ci
       - name: Inspect the native executable and frontend runtime
         if: runner.os == 'Linux'

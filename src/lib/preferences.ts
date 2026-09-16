@@ -3,10 +3,11 @@ import type { Role } from "./contracts";
 export type CatalogPreferences = {
   previewVisible: boolean;
   gridRole: Role;
+  gridZoom: number;
 };
 
 const storageKey = "pathfinder-portrait-manager.catalog-preferences";
-const defaults: CatalogPreferences = { previewVisible: true, gridRole: "large" };
+const defaults: CatalogPreferences = { previewVisible: true, gridRole: "large", gridZoom: 100 };
 
 function isRole(value: unknown): value is Role {
   return value === "small" || value === "medium" || value === "large";
@@ -21,6 +22,8 @@ export function loadCatalogPreferences(): CatalogPreferences {
     return {
       previewVisible: typeof preferences.previewVisible === "boolean" ? preferences.previewVisible : defaults.previewVisible,
       gridRole: isRole(preferences.gridRole) ? preferences.gridRole : defaults.gridRole,
+      gridZoom: typeof preferences.gridZoom === "number" && Number.isFinite(preferences.gridZoom)
+        ? Math.min(200, Math.max(75, preferences.gridZoom)) : defaults.gridZoom,
     };
   } catch {
     return defaults;

@@ -27,6 +27,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "shortDescription": "Offline portrait library for Pathfinder games",
+    "longDescription": "Manage, search, tag, back up, and export game-ready portraits for Pathfinder: Kingmaker and Wrath of the Righteous.",
+    "category": "Utility",
     "resources": [
       "../THIRD_PARTY_NOTICES.md",
       "../licenses/libarchive-COPYING",
@@ -44,6 +47,11 @@
           "libssl3"
         ]
       }
-    }
+    },
+    "icon": [
+      "icons/icon.png",
+      "icons/icon.ico",
+      "icons/icon.icns"
+    ]
   }
 }

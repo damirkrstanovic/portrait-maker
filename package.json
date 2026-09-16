@@ -5,13 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "desktop": "node scripts/desktop.mjs",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
     "check": "tsc --noEmit && vitest run && vite build",
     "benchmark:seed": "node scripts/seed-benchmark.mjs",
     "check:bundle": "node scripts/check-bundle.mjs",
     "test:e2e": "playwright test",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "package": "node scripts/package.mjs",
+    "package:linux": "bash scripts/package-linux.sh",
+    "package:windows": "tauri build --bundles nsis,msi --ci",
+    "package:macos": "tauri build --bundles app,dmg --ci"
   },
   "dependencies": {
     "@tanstack/react-virtual": "3.13.13",

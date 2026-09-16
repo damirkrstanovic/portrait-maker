@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-resolve-prefix"
+description = "Enables the resolve_prefix command without any pre-configured scope."
+commands.allow = ["resolve_prefix"]
+
+[[permission]]
+identifier = "deny-resolve-prefix"
+description = "Denies the resolve_prefix command without any pre-configured scope."
+commands.deny = ["resolve_prefix"]

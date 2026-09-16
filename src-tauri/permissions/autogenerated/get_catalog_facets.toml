@@ -1,0 +1,9 @@
+[[permission]]
+identifier = "allow-get-catalog-facets"
+description = "Enables the get_catalog_facets command."
+commands.allow = ["get_catalog_facets"]
+
+[[permission]]
+identifier = "deny-get-catalog-facets"
+description = "Denies the get_catalog_facets command."
+commands.deny = ["get_catalog_facets"]

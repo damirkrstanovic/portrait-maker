@@ -1,0 +1,32 @@
+[package]
+name = "portrait-core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+tempfile.workspace = true
+zip = { version = "2.4.2", default-features = false }
+sha2 = "0.10.9"
+fs2.workspace = true
+libc.workspace = true
+image = { version = "0.25.10", default-features = false, features = ["png"] }
+keyvalues-parser = "0.2.4"
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+unicode-normalization.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[build-dependencies]
+pkg-config = "0.3.32"
+vcpkg = "0.2.15"
+
+[target.'cfg(windows)'.dependencies]
+known-folders = "1.4.2"
+winreg = "0.56"

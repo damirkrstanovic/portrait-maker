@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-designate-export-target"
+description = "Enables the designate_export_target command without any pre-configured scope."
+commands.allow = ["designate_export_target"]
+
+[[permission]]
+identifier = "deny-designate-export-target"
+description = "Denies the designate_export_target command without any pre-configured scope."
+commands.deny = ["designate_export_target"]

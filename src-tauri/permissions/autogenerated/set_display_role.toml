@@ -1,0 +1,9 @@
+[[permission]]
+identifier = "allow-set-display-role"
+description = "Enables the set_display_role command."
+commands.allow = ["set_display_role"]
+
+[[permission]]
+identifier = "deny-set-display-role"
+description = "Denies the set_display_role command."
+commands.deny = ["set_display_role"]

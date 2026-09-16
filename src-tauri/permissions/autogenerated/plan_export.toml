@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-plan-export"
+description = "Enables the plan_export command without any pre-configured scope."
+commands.allow = ["plan_export"]
+
+[[permission]]
+identifier = "deny-plan-export"
+description = "Denies the plan_export command without any pre-configured scope."
+commands.deny = ["plan_export"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-restore-result"
+description = "Enables the get_restore_result command without any pre-configured scope."
+commands.allow = ["get_restore_result"]
+
+[[permission]]
+identifier = "deny-get-restore-result"
+description = "Denies the get_restore_result command without any pre-configured scope."
+commands.deny = ["get_restore_result"]

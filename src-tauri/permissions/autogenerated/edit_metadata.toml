@@ -1,0 +1,9 @@
+[[permission]]
+identifier = "allow-edit-metadata"
+description = "Enables the edit_metadata command."
+commands.allow = ["edit_metadata"]
+
+[[permission]]
+identifier = "deny-edit-metadata"
+description = "Denies the edit_metadata command."
+commands.deny = ["edit_metadata"]

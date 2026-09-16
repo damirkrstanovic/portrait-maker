@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-saved-destinations"
+description = "Enables the get_saved_destinations command without any pre-configured scope."
+commands.allow = ["get_saved_destinations"]
+
+[[permission]]
+identifier = "deny-get-saved-destinations"
+description = "Denies the get_saved_destinations command without any pre-configured scope."
+commands.deny = ["get_saved_destinations"]

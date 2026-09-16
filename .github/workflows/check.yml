@@ -1,0 +1,74 @@
+name: check
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-ubuntu-22.04
+            os: ubuntu-22.04
+            bundle: deb,appimage
+          - name: windows-msvc
+            os: windows-latest
+            bundle: nsis
+          - name: macos-native
+            os: macos-latest
+            bundle: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - name: Install Linux desktop prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes build-essential cmake ninja-build pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev libssl-dev libbz2-dev liblzma-dev libzstd-dev zlib1g-dev
+      - name: Build pinned static libarchive on Unix runners
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          cmake -S packaging/libarchive -B "$RUNNER_TEMP/libarchive-build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/libarchive-prefix"
+          cmake --build "$RUNNER_TEMP/libarchive-build" --parallel
+          cmake --install "$RUNNER_TEMP/libarchive-build"
+      - name: Install libarchive through the checked vcpkg triplet
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          vcpkg install libarchive:x64-windows-static-md
+          "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "VCPKGRS_DYNAMIC=0" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Configure Unix static libarchive discovery
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          echo "PKG_CONFIG_PATH=$RUNNER_TEMP/libarchive-prefix/lib/pkgconfig" >> "$GITHUB_ENV"
+          echo "LIBARCHIVE_STATIC=1" >> "$GITHUB_ENV"
+      - run: npm ci
+      - run: npm run check
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      - run: cargo test --locked --workspace
+      - name: Build native bundle artifacts
+        run: npm run tauri -- build --bundles ${{ matrix.bundle }} --ci
+      - name: Inspect the native executable and frontend runtime
+        if: runner.os == 'Linux'
+        run: npm run check:bundle -- target/release/portrait-manager dist
+      - name: Upload release-candidate artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: portrait-manager-${{ matrix.name }}
+          path: target/release/bundle/**
+          if-no-files-found: error

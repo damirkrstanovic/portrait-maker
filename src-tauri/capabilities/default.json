@@ -1,0 +1,43 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "desktop",
+  "description": "Library chooser access for the main desktop window",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "allow-create-library",
+    "allow-open-library",
+    "allow-close-library",
+    "allow-get-last-library-path",
+    "allow-discover-destinations",
+    "allow-get-saved-destinations",
+    "allow-save-destination",
+    "allow-validate-destination",
+    "allow-resolve-prefix",
+    "allow-start-import",
+    "allow-get-job",
+    "allow-cancel-job",
+    "allow-get-import-report",
+    "allow-query-catalog",
+    "allow-get-catalog-facets",
+    "allow-get-display-role",
+    "allow-set-display-role",
+    "allow-edit-metadata",
+    "allow-rename-source",
+    "allow-change-selection",
+    "allow-trash-portraits",
+    "allow-restore-portraits",
+    "allow-start-purge",
+    "dialog:allow-open",
+    "allow-plan-export",
+    "allow-designate-export-target",
+    "allow-validate-export-plan",
+    "allow-discard-export-plan",
+    "allow-apply-export",
+    "allow-get-export-report",
+    "allow-start-backup",
+    "allow-start-restore",
+    "allow-get-restore-result"
+  ]
+}

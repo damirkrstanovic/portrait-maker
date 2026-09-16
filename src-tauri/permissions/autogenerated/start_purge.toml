@@ -1,0 +1,9 @@
+[[permission]]
+identifier = "allow-start-purge"
+description = "Enables the start_purge command."
+commands.allow = ["start_purge"]
+
+[[permission]]
+identifier = "deny-start-purge"
+description = "Denies the start_purge command."
+commands.deny = ["start_purge"]

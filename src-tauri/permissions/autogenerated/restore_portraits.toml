@@ -1,0 +1,9 @@
+[[permission]]
+identifier = "allow-restore-portraits"
+description = "Enables the restore_portraits command."
+commands.allow = ["restore_portraits"]
+
+[[permission]]
+identifier = "deny-restore-portraits"
+description = "Denies the restore_portraits command."
+commands.deny = ["restore_portraits"]

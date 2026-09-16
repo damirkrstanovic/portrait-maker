@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-export-report"
+description = "Enables the get_export_report command without any pre-configured scope."
+commands.allow = ["get_export_report"]
+
+[[permission]]
+identifier = "deny-get-export-report"
+description = "Denies the get_export_report command without any pre-configured scope."
+commands.deny = ["get_export_report"]

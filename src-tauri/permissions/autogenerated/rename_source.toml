@@ -1,0 +1,9 @@
+[[permission]]
+identifier = "allow-rename-source"
+description = "Enables the rename_source command."
+commands.allow = ["rename_source"]
+
+[[permission]]
+identifier = "deny-rename-source"
+description = "Denies the rename_source command."
+commands.deny = ["rename_source"]

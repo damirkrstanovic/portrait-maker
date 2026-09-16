@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Pathfinder Portrait Manager",
+  "version": "0.1.0",
+  "identifier": "dev.portraitmaker.pathfinder",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Pathfinder Portrait Manager",
+        "width": 1080,
+        "height": 720,
+        "minWidth": 760,
+        "minHeight": 560,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: portrait: http://asset.localhost http://portrait.localhost; style-src 'self' 'unsafe-inline'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "resources": [
+      "../THIRD_PARTY_NOTICES.md",
+      "../licenses/libarchive-COPYING",
+      "../licenses/UNICODE-LICENSE.txt"
+    ],
+    "linux": {
+      "deb": {
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0",
+          "zlib1g",
+          "libbz2-1.0",
+          "liblzma5",
+          "libzstd1",
+          "libssl3"
+        ]
+      }
+    }
+  }
+}

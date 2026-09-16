@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "labels": [
+    {"category":"gender","value":"woman","aliases":[["female"],["woman"],["girl"]]},
+    {"category":"gender","value":"man","aliases":[["male"],["man"],["boy"]]},
+    {"category":"race","value":"human","aliases":[["human"]]},
+    {"category":"race","value":"elf","aliases":[["elf"],["half","elf"]]},
+    {"category":"race","value":"dwarf","aliases":[["dwarf"]]},
+    {"category":"race","value":"halfling","aliases":[["halfling"]]},
+    {"category":"race","value":"gnome","aliases":[["gnome"]]},
+    {"category":"race","value":"orc","aliases":[["orc"],["half","orc"]]},
+    {"category":"race","value":"tiefling","aliases":[["tiefling"]]},
+    {"category":"race","value":"aasimar","aliases":[["aasimar"]]},
+    {"category":"race","value":"kitsune","aliases":[["kitsune"]]},
+    {"category":"race","value":"dhampir","aliases":[["dhampir"]]},
+    {"category":"class","value":"mage","aliases":[["mage"],["wizard"],["sorcerer"],["witch"],["arcanist"],["magus"],["arcane","archer"]]},
+    {"category":"class","value":"martial","aliases":[["fighter"],["barbarian"],["paladin"],["monk"],["rogue"],["warrior"],["knight"],["swashbuckler"]]},
+    {"category":"class","value":"archer","aliases":[["archer"],["archery"],["ranger"],["arcane","archer"]]}
+  ]
+}

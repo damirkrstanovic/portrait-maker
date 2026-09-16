@@ -1,0 +1,9 @@
+[[permission]]
+identifier = "allow-trash-portraits"
+description = "Enables the trash_portraits command."
+commands.allow = ["trash_portraits"]
+
+[[permission]]
+identifier = "deny-trash-portraits"
+description = "Denies the trash_portraits command."
+commands.deny = ["trash_portraits"]

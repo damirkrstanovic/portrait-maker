@@ -182,6 +182,72 @@ pub struct ImportRequest {
     pub source_name: String,
     pub kind: ImportKind,
     pub resize: bool,
+    #[serde(default)]
+    pub duplicate_policy: DuplicatePolicy,
+}
+
+/// What an import should do after its duplicate review has completed.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum DuplicatePolicy {
+    /// Retain every complete portrait set. This preserves the historical import behaviour.
+    #[default]
+    Keep,
+    /// Do not create a second active portrait for an exact match; retain its source and labels.
+    Skip,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DuplicateMember {
+    pub portrait: Portrait,
+    pub source_names: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DuplicateGroup {
+    pub fingerprint: String,
+    pub members: Vec<DuplicateMember>,
+    pub name_conflict: bool,
+    pub description_conflict: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DuplicateScanReport {
+    pub groups: Vec<DuplicateGroup>,
+    pub issues: Vec<Issue>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportDuplicateMatch {
+    pub folder: String,
+    pub name: String,
+    pub matching_portrait_id: Option<Id>,
+    pub matching_name: Option<String>,
+    pub duplicate_of_in_batch: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportDuplicateReport {
+    pub matches: Vec<ImportDuplicateMatch>,
+    pub issues: Vec<Issue>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DuplicateConsolidation {
+    pub keep_id: Id,
+    pub remove_ids: Vec<Id>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DuplicateConsolidationReport {
+    pub trashed: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

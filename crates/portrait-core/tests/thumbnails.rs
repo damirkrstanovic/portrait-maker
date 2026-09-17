@@ -85,6 +85,26 @@ fn generates_a_png_bounded_by_requested_edge_without_changing_the_original() {
 }
 
 #[test]
+fn does_not_upscale_small_portraits_for_a_larger_grid_edge() {
+    let temp = tempfile::tempdir().unwrap();
+    let library = Library::create(&temp.path().join("library")).unwrap();
+    let id = Uuid::new_v4();
+    insert_portrait(&library, id, [20, 30, 40, 255]);
+    let original = library
+        .root()
+        .join("portraits")
+        .join(id.to_string())
+        .join("Small.png");
+    RgbaImage::from_pixel(100, 50, Rgba([20, 30, 40, 255]))
+        .save(&original)
+        .unwrap();
+
+    let cached = thumbnail(&library, id, Role::Small, 360).unwrap();
+
+    assert_eq!(image::image_dimensions(cached).unwrap(), (100, 50));
+}
+
+#[test]
 fn regenerated_cache_uses_changed_asset_metadata_and_library_roots_do_not_cross() {
     let temp = tempfile::tempdir().unwrap();
     let first = Library::create(&temp.path().join("first")).unwrap();

@@ -26,6 +26,20 @@ pub(crate) fn validate_portrait_with_job(
     directory: &Path,
     job: &JobContext,
 ) -> Result<Vec<AssetSpec>> {
+    inspect_portrait(directory, job, true)
+}
+
+/// Fast import-tree inspection. Full PNG decoding is deliberately deferred to duplicate
+/// fingerprinting/import, so an incoming image is decoded once rather than during both scan
+/// and import.
+pub(crate) fn inspect_portrait_with_job(
+    directory: &Path,
+    job: &JobContext,
+) -> Result<Vec<AssetSpec>> {
+    inspect_portrait(directory, job, false)
+}
+
+fn inspect_portrait(directory: &Path, job: &JobContext, decode: bool) -> Result<Vec<AssetSpec>> {
     let mut found = std::collections::BTreeMap::new();
     let mut has_candidate = false;
     let mut unsupported = false;
@@ -67,7 +81,11 @@ pub(crate) fn validate_portrait_with_job(
         .map(|role| {
             check_cancelled(job)?;
             let path = found.remove(&role).expect("all roles were checked above");
-            let (width, height) = decode_png(&path)?.dimensions();
+            let (width, height) = if decode {
+                decode_png(&path)?.dimensions()
+            } else {
+                png_dimensions(&path)?
+            };
             Ok(AssetSpec {
                 role,
                 original_path: path,
@@ -76,6 +94,12 @@ pub(crate) fn validate_portrait_with_job(
             })
         })
         .collect()
+}
+
+fn png_dimensions(path: &Path) -> Result<(u32, u32)> {
+    ImageReader::with_format(std::io::BufReader::new(File::open(path)?), ImageFormat::Png)
+        .into_dimensions()
+        .map_err(|error| CoreError::InvalidPng(error.to_string()))
 }
 
 fn check_cancelled(job: &JobContext) -> Result<()> {

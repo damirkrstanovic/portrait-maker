@@ -12,3 +12,6 @@
 # Private, read-only local import samples
 /p1.zip
 /heroes.rar
+
+# Local model credentials
+/.apikey

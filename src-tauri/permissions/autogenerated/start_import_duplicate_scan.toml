@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-start-import-duplicate-scan"
+description = "Enables the start_import_duplicate_scan command without any pre-configured scope."
+commands.allow = ["start_import_duplicate_scan"]

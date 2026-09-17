@@ -4,7 +4,7 @@ use crate::Result;
 
 use super::{
     JobContext,
-    validate::{AssetSpec, validate_portrait_with_job},
+    validate::{AssetSpec, inspect_portrait_with_job},
 };
 
 #[derive(Debug)]
@@ -36,7 +36,7 @@ fn visit(
     if metadata.file_type().is_symlink() || !metadata.is_dir() {
         return Ok(());
     }
-    let assets = validate_portrait_with_job(directory, job);
+    let assets = inspect_portrait_with_job(directory, job);
     match &assets {
         Ok(_) | Err(crate::CoreError::AmbiguousPortraitSet) => {
             candidates.push(candidate(root, directory, root_context, assets))

@@ -15,6 +15,18 @@ pub const MAX_THUMBNAIL_EDGE: u32 = 1024;
 pub const MAX_DECODE_BYTES: u64 = 256 * 1024 * 1024;
 const MAX_WORKERS: usize = 2;
 
+/// A checked managed image path plus the location where its thumbnails belong.
+///
+/// It is deliberately independent of the SQLite connection.  Desktop callers
+/// look this up while holding their library lock, then can release that lock
+/// before doing image decoding and PNG encoding.
+#[derive(Debug, Clone)]
+pub struct ThumbnailSource {
+    path: PathBuf,
+    file_size: i64,
+    cache_directory: PathBuf,
+}
+
 #[derive(Debug, Clone)]
 struct Asset {
     path: PathBuf,
@@ -68,11 +80,33 @@ fn acquire_budget(bytes: u64) -> Result<BudgetPermit> {
 }
 
 pub fn thumbnail(library: &Library, id: Uuid, role: Role, edge: u32) -> Result<PathBuf> {
+    let source = thumbnail_source(library, id, role)?;
+    thumbnail_from_source(&source, id, role, edge)
+}
+
+/// Resolve and validate a managed image while a caller has access to a
+/// [`Library`].  Rendering the thumbnail itself can happen later without
+/// keeping the library (and its SQLite connection) locked.
+pub fn thumbnail_source(library: &Library, id: Uuid, role: Role) -> Result<ThumbnailSource> {
+    let asset = asset(library, id, role)?;
+    Ok(ThumbnailSource {
+        path: asset.path,
+        file_size: asset.file_size,
+        cache_directory: library.root().join("cache").join("thumbnails"),
+    })
+}
+
+/// Render or retrieve a thumbnail for a previously checked managed image.
+pub fn thumbnail_from_source(
+    source: &ThumbnailSource,
+    id: Uuid,
+    role: Role,
+    edge: u32,
+) -> Result<PathBuf> {
     if !(1..=MAX_THUMBNAIL_EDGE).contains(&edge) {
         return Err(CoreError::InvalidThumbnailEdge);
     }
-    let asset = asset(library, id, role)?;
-    let metadata = fs::metadata(&asset.path)?;
+    let metadata = fs::metadata(&source.path)?;
     let modified = metadata
         .modified()?
         .duration_since(UNIX_EPOCH)
@@ -81,23 +115,25 @@ pub fn thumbnail(library: &Library, id: Uuid, role: Role, edge: u32) -> Result<P
         "{}-{}-{edge}-{}-{}-{}.png",
         id,
         role_name(role),
-        asset.file_size,
+        source.file_size,
         metadata.len(),
         modified.as_nanos(),
     );
-    let cache_directory = library.root().join("cache").join("thumbnails");
-    fs::create_dir_all(&cache_directory)?;
-    let output = cache_directory.join(&cache_name);
+    fs::create_dir_all(&source.cache_directory)?;
+    let output = source.cache_directory.join(&cache_name);
     if output.is_file() {
         return Ok(output);
     }
 
-    let dimensions = image::image_dimensions(&asset.path)
+    let dimensions = image::image_dimensions(&source.path)
         .map_err(|error| CoreError::InvalidPng(error.to_string()))?;
     let _permit = acquire_budget(u64::from(dimensions.0) * u64::from(dimensions.1) * 4)?;
-    let image = decode_png(&asset.path)?;
-    let resized = image.resize(edge, edge, FilterType::Triangle);
-    let temporary = cache_directory.join(format!(".{cache_name}.{}.tmp", Uuid::new_v4()));
+    let image = decode_png(&source.path)?;
+    let target_edge = edge.min(dimensions.0.max(dimensions.1));
+    let resized = image.resize(target_edge, target_edge, FilterType::Triangle);
+    let temporary = source
+        .cache_directory
+        .join(format!(".{cache_name}.{}.tmp", Uuid::new_v4()));
     resized
         .save_with_format(&temporary, image::ImageFormat::Png)
         .map_err(|error| CoreError::InvalidPng(error.to_string()))?;

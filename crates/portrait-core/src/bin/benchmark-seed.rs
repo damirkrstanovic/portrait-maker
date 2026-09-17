@@ -67,6 +67,7 @@ fn seed(library_root: PathBuf, sources: Vec<PathBuf>) -> Result<Value, Box<dyn s
                 source_name: format!("Synthetic benchmark source {:02}", index + 1),
                 kind: ImportKind::Folder,
                 resize: false,
+                duplicate_policy: Default::default(),
             },
             &JobContext::default(),
         )?;

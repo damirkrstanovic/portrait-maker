@@ -101,6 +101,10 @@ pub enum CoreError {
     InvalidMetadataLabel,
     #[error("The requested source is not in the open library.")]
     SourceNotFound,
+    #[error(
+        "The duplicate review is stale or contains portraits that are no longer exact active duplicates."
+    )]
+    InvalidDuplicateConsolidation,
     #[error("Filesystem operation failed: {0}")]
     Io(#[from] io::Error),
     #[error("Database operation failed: {0}")]
@@ -159,6 +163,7 @@ impl CoreError {
             Self::MetadataNameRequiresSinglePortrait => "METADATA_NAME_REQUIRES_SINGLE_PORTRAIT",
             Self::InvalidMetadataLabel => "METADATA_LABEL_INVALID",
             Self::SourceNotFound => "SOURCE_NOT_FOUND",
+            Self::InvalidDuplicateConsolidation => "DUPLICATE_CONSOLIDATION_INVALID",
             Self::Io(_) => "FILESYSTEM_ERROR",
             Self::Database(_) => "DATABASE_ERROR",
             Self::Json(_) => "SERIALIZATION_ERROR",

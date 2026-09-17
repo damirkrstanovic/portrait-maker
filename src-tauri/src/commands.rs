@@ -3,7 +3,8 @@ use std::path::PathBuf;
 use portrait_core::Library;
 use portrait_core::metadata::MetadataPatch;
 use portrait_core::types::{
-    AppError, CatalogFacets, CatalogPage, Destination, DiscoveryReport, Game, ImportReport,
+    AppError, CatalogFacets, CatalogPage, Destination, DiscoveryReport, DuplicateConsolidation,
+    DuplicateConsolidationReport, DuplicateScanReport, Game, ImportDuplicateReport, ImportReport,
     ImportRequest, Job, Page, Query, Role, SelectionAction, SelectionTarget,
 };
 use tauri::State;
@@ -89,6 +90,46 @@ pub(crate) fn get_import_report(
         recoverable: true,
     })?;
     state.import_report(id)
+}
+
+#[tauri::command]
+pub(crate) fn start_duplicate_scan(state: State<'_, DesktopState>) -> Result<Job, AppError> {
+    state.start_duplicate_scan()
+}
+
+#[tauri::command]
+pub(crate) fn get_duplicate_scan_report(
+    id: String,
+    state: State<'_, DesktopState>,
+) -> Result<Option<DuplicateScanReport>, AppError> {
+    state.duplicate_scan_report(uuid::Uuid::parse_str(&id).map_err(worker_error)?)
+}
+
+#[tauri::command]
+pub(crate) fn start_import_duplicate_scan(
+    request: ImportRequest,
+    state: State<'_, DesktopState>,
+) -> Result<Job, AppError> {
+    state.start_import_duplicate_scan(request)
+}
+
+#[tauri::command]
+pub(crate) fn get_import_duplicate_report(
+    id: String,
+    state: State<'_, DesktopState>,
+) -> Result<Option<ImportDuplicateReport>, AppError> {
+    state.import_duplicate_report(uuid::Uuid::parse_str(&id).map_err(worker_error)?)
+}
+
+#[tauri::command]
+pub(crate) async fn consolidate_duplicates(
+    groups: Vec<DuplicateConsolidation>,
+    state: State<'_, DesktopState>,
+) -> Result<DuplicateConsolidationReport, AppError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || state.consolidate_duplicates(&groups))
+        .await
+        .map_err(worker_error)?
 }
 
 #[tauri::command]

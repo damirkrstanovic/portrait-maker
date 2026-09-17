@@ -15,11 +15,19 @@ pub fn run() {
             app.manage(state::DesktopState::new(config_dir));
             Ok(())
         })
-        .register_uri_scheme_protocol("portrait", |context, request| {
-            assets::serve(
-                context.app_handle().state::<state::DesktopState>().inner(),
-                request.uri().path(),
-            )
+        .register_asynchronous_uri_scheme_protocol("portrait", |context, request, responder| {
+            // URI protocol callbacks run on the webview path. Thumbnail cache
+            // misses decode and encode PNGs, so keep that CPU and disk work off
+            // the UI thread.
+            let state = context
+                .app_handle()
+                .state::<state::DesktopState>()
+                .inner()
+                .clone();
+            let path = request.uri().path().to_owned();
+            tauri::async_runtime::spawn_blocking(move || {
+                responder.respond(assets::serve(&state, &path));
+            });
         })
         .invoke_handler(tauri::generate_handler![
             commands::start_backup,
@@ -33,6 +41,11 @@ pub fn run() {
             commands::get_job,
             commands::cancel_job,
             commands::get_import_report,
+            commands::start_duplicate_scan,
+            commands::get_duplicate_scan_report,
+            commands::start_import_duplicate_scan,
+            commands::get_import_duplicate_report,
+            commands::consolidate_duplicates,
             commands::query_catalog,
             commands::get_catalog_facets,
             commands::get_display_role,

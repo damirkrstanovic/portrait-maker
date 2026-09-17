@@ -1,3 +1,4 @@
+import { DuplicateDialog } from "../features/duplicates/DuplicateDialog";
 import { BackupDialog } from "../features/backup/BackupDialog";
 import { ExportProgress } from "../features/export/ExportProgress";
 import type { ExportReport } from "../lib/contracts";
@@ -38,6 +39,7 @@ export function App({ api = desktopApi }: Props) {
   const [lastLibraryPath, setLastLibraryPath] = useState<string | null>(null);
   const [portableMode, setPortableMode] = useState<"backup" | "restore" | null>(null);
   const [showExport, setShowExport] = useState(false);
+  const [duplicateReview, setDuplicateReview] = useState<{ request?: ImportRequest } | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [job, setJob] = useState<Job | null>(null);
   const [report, setReport] = useState<ImportReport | null>(null);
@@ -129,12 +131,20 @@ export function App({ api = desktopApi }: Props) {
     }
   };
 
-  const startImport = async (request: ImportRequest) => {
+  const executeImport = async (request: ImportRequest) => {
     const next = await api.startImport(request);
     setShowImport(false);
+    setDuplicateReview(null);
     setJobKind("import");
     setReport(null);
     setJob(next);
+  };
+
+  const startImport = async (request: ImportRequest) => {
+    if (api.startImportDuplicateScan && api.getImportDuplicateReport) {
+      setShowImport(false);
+      setDuplicateReview({ request });
+    } else await executeImport(request);
   };
 
   const cancelImport = async () => {
@@ -174,11 +184,12 @@ export function App({ api = desktopApi }: Props) {
 
   if (library) {
     return (
-      <AppLayout library={library} busy={busy} onImport={() => setShowImport(true)} onExport={() => setShowExport(true)} onDestinations={() => { setDestinationError(null); setShowDestinations(true); setShowDestinationEditor(false); void refreshDestinations(); }} destinationsTriggerRef={destinationsTrigger} onBackup={() => setPortableMode("backup")} onCloseLibrary={closeLibrary}>
+      <AppLayout onFindDuplicates={api.startDuplicateScan ? () => setDuplicateReview({}) : undefined} library={library} busy={busy} onImport={() => setShowImport(true)} onExport={() => setShowExport(true)} onDestinations={() => { setDestinationError(null); setShowDestinations(true); setShowDestinationEditor(false); void refreshDestinations(); }} destinationsTriggerRef={destinationsTrigger} onBackup={() => setPortableMode("backup")} onCloseLibrary={closeLibrary}>
         {error ? <div className="error-notice" role="alert"><span>{error.message}</span></div> : null}
         <CatalogBrowser api={api} onImport={() => setShowImport(true)} refreshKey={catalogRefresh} />
         {portableMode === "backup" && <BackupDialog api={api} mode="backup" onClose={() => { setPortableMode(null); requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(".library-menu > button")?.focus()); }} />}
         {showExport ? <ExportDialog api={api} onClose={() => setShowExport(false)} onStarted={(next) => { setJobKind("export"); setExportReport(null); setJob(next); }} /> : null}
+        {duplicateReview && <DuplicateDialog api={api} request={duplicateReview.request} onImport={executeImport} onChanged={() => setCatalogRefresh(current => current + 1)} onClose={() => { setDuplicateReview(null); requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(".library-menu > button")?.focus()); }} />}
         {showImport ? <ImportDialog api={api} onClose={() => setShowImport(false)} onStart={startImport} /> : null}
         {job && jobKind === "export" ? <ExportProgress job={job} report={exportReport} onCancel={() => void cancelImport()} onClose={() => { setJob(null); setExportReport(null); requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(".library-actions button:nth-child(2)")?.focus()); }} /> : null}
         {job && jobKind === "import" ? <ImportProgress job={job} report={report} onCancel={() => void cancelImport()} onClose={() => { setJob(null); setReport(null); }} /> : null}

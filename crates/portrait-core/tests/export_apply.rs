@@ -19,6 +19,7 @@ fn fixture() -> (tempfile::TempDir, Library) {
             source_name: "test".into(),
             kind: ImportKind::Folder,
             resize: false,
+            duplicate_policy: Default::default(),
         },
         &JobContext::default(),
     )
@@ -130,6 +131,7 @@ fn zip_roundtrip_and_overwrite_confirmation() {
             source_name: "ZIP roundtrip".into(),
             kind: ImportKind::Folder,
             resize: false,
+            duplicate_policy: Default::default(),
         },
         &JobContext::default(),
     )

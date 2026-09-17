@@ -6,12 +6,14 @@ use portrait_core::catalog::{catalog_facets, query_catalog};
 use portrait_core::discovery::{
     DiscoveryEnvironment, discover_report, resolve_prefix, validate_destination,
 };
+use portrait_core::duplicate::{consolidate_duplicates, scan_duplicates, scan_import_duplicates};
 use portrait_core::import::{JobContext, import_portraits};
 use portrait_core::metadata::{MetadataPatch, edit_metadata, rename_source};
 use portrait_core::selection::change_selection;
 use portrait_core::trash::{purge_portraits, restore_portraits, trash_portraits};
 use portrait_core::types::{
-    AppError, CatalogFacets, CatalogPage, Destination, DiscoveryReport, Game, ImportReport,
+    AppError, CatalogFacets, CatalogPage, Destination, DiscoveryReport, DuplicateConsolidation,
+    DuplicateConsolidationReport, DuplicateScanReport, Game, ImportDuplicateReport, ImportReport,
     ImportRequest, Job, JobState, Page, Query, Role, SelectionAction, SelectionTarget,
 };
 use portrait_core::{CoreError, Library};
@@ -40,6 +42,8 @@ struct LibraryJob {
     job: Job,
     context: JobContext,
     report: Option<ImportReport>,
+    duplicate_report: Option<DuplicateScanReport>,
+    import_duplicate_report: Option<ImportDuplicateReport>,
     export_report: Option<portrait_core::types::ExportReport>,
     restored_library: Option<LibraryInfo>,
 }
@@ -177,6 +181,8 @@ impl DesktopState {
                 job: job.clone(),
                 context: context.clone(),
                 report: None,
+                duplicate_report: None,
+                import_duplicate_report: None,
                 export_report: None,
                 restored_library: None,
             },
@@ -246,6 +252,8 @@ impl DesktopState {
                 job: job.clone(),
                 context: context.clone(),
                 report: None,
+                duplicate_report: None,
+                import_duplicate_report: None,
                 export_report: None,
                 restored_library: None,
             },
@@ -324,6 +332,192 @@ impl DesktopState {
             .map_err(state_error)?
             .get(&id)
             .and_then(|entry| entry.report.clone()))
+    }
+
+    pub fn start_duplicate_scan(&self) -> Result<Job, AppError> {
+        self.start_duplicate_job("Checking library duplicates", |library, context| {
+            scan_duplicates(library, context)
+        })
+    }
+
+    pub fn start_import_duplicate_scan(&self, request: ImportRequest) -> Result<Job, AppError> {
+        if self.library.lock().map_err(state_error)?.is_none() {
+            return Err(library_not_open("checking import duplicates"));
+        }
+        let id = Uuid::new_v4();
+        let jobs_for_progress = Arc::clone(&self.jobs);
+        let context = JobContext::with_status_progress(move |completed, total, message| {
+            if let Ok(mut jobs) = jobs_for_progress.lock()
+                && let Some(entry) = jobs.get_mut(&id)
+                && entry.job.state == JobState::Running
+            {
+                entry.job.completed = completed;
+                entry.job.total = total;
+                entry.job.message = message.into();
+            }
+        });
+        let job = Job {
+            id,
+            state: JobState::Running,
+            completed: 0,
+            total: None,
+            message: "Checking import duplicates".into(),
+        };
+        self.jobs.lock().map_err(state_error)?.insert(
+            id,
+            LibraryJob {
+                job: job.clone(),
+                context: context.clone(),
+                report: None,
+                duplicate_report: None,
+                import_duplicate_report: None,
+                export_report: None,
+                restored_library: None,
+            },
+        );
+        let library = Arc::clone(&self.library);
+        let jobs = Arc::clone(&self.jobs);
+        std::thread::spawn(move || {
+            let result = match library.lock() {
+                Ok(guard) => guard
+                    .as_ref()
+                    .ok_or(CoreError::LibraryNotFound)
+                    .and_then(|library| scan_import_duplicates(library, &request, &context)),
+                Err(error) => Err(CoreError::Migration(error.to_string())),
+            };
+            if let Ok(mut jobs) = jobs.lock()
+                && let Some(entry) = jobs.get_mut(&id)
+            {
+                match result {
+                    Ok(report) => {
+                        entry.job.state = JobState::Done;
+                        entry.job.message = format!(
+                            "Found {} import duplicate{}",
+                            report.matches.len(),
+                            if report.matches.len() == 1 { "" } else { "s" }
+                        );
+                        entry.import_duplicate_report = Some(report);
+                    }
+                    Err(CoreError::Cancelled) => {
+                        entry.job.state = JobState::Cancelled;
+                        entry.job.message = "Duplicate scan cancelled".into();
+                    }
+                    Err(error) => {
+                        entry.job.state = JobState::Failed;
+                        entry.job.message = error.to_string();
+                    }
+                }
+            }
+        });
+        Ok(job)
+    }
+
+    fn start_duplicate_job(
+        &self,
+        message: &str,
+        work: impl FnOnce(&Library, &JobContext) -> portrait_core::Result<DuplicateScanReport>
+        + Send
+        + 'static,
+    ) -> Result<Job, AppError> {
+        if self.library.lock().map_err(state_error)?.is_none() {
+            return Err(library_not_open("checking duplicates"));
+        }
+        let id = Uuid::new_v4();
+        let jobs_for_progress = Arc::clone(&self.jobs);
+        let context = JobContext::with_status_progress(move |completed, total, phase| {
+            if let Ok(mut jobs) = jobs_for_progress.lock()
+                && let Some(entry) = jobs.get_mut(&id)
+                && entry.job.state == JobState::Running
+            {
+                entry.job.completed = completed;
+                entry.job.total = total;
+                entry.job.message = phase.into();
+            }
+        });
+        let job = Job {
+            id,
+            state: JobState::Running,
+            completed: 0,
+            total: None,
+            message: message.into(),
+        };
+        self.jobs.lock().map_err(state_error)?.insert(
+            id,
+            LibraryJob {
+                job: job.clone(),
+                context: context.clone(),
+                report: None,
+                duplicate_report: None,
+                import_duplicate_report: None,
+                export_report: None,
+                restored_library: None,
+            },
+        );
+        let library = Arc::clone(&self.library);
+        let jobs = Arc::clone(&self.jobs);
+        std::thread::spawn(move || {
+            let result = match library.lock() {
+                Ok(guard) => guard
+                    .as_ref()
+                    .ok_or(CoreError::LibraryNotFound)
+                    .and_then(|library| work(library, &context)),
+                Err(error) => Err(CoreError::Migration(error.to_string())),
+            };
+            if let Ok(mut jobs) = jobs.lock()
+                && let Some(entry) = jobs.get_mut(&id)
+            {
+                match result {
+                    Ok(report) => {
+                        entry.job.state = JobState::Done;
+                        entry.job.message = format!(
+                            "Found {} duplicate group{}",
+                            report.groups.len(),
+                            if report.groups.len() == 1 { "" } else { "s" }
+                        );
+                        entry.duplicate_report = Some(report);
+                    }
+                    Err(CoreError::Cancelled) => {
+                        entry.job.state = JobState::Cancelled;
+                        entry.job.message = "Duplicate scan cancelled".into();
+                    }
+                    Err(error) => {
+                        entry.job.state = JobState::Failed;
+                        entry.job.message = error.to_string();
+                    }
+                }
+            }
+        });
+        Ok(job)
+    }
+
+    pub fn duplicate_scan_report(&self, id: Uuid) -> Result<Option<DuplicateScanReport>, AppError> {
+        Ok(self
+            .jobs
+            .lock()
+            .map_err(state_error)?
+            .get(&id)
+            .and_then(|entry| entry.duplicate_report.clone()))
+    }
+    pub fn import_duplicate_report(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<ImportDuplicateReport>, AppError> {
+        Ok(self
+            .jobs
+            .lock()
+            .map_err(state_error)?
+            .get(&id)
+            .and_then(|entry| entry.import_duplicate_report.clone()))
+    }
+    pub fn consolidate_duplicates(
+        &self,
+        groups: &[DuplicateConsolidation],
+    ) -> Result<DuplicateConsolidationReport, AppError> {
+        let mut guard = self.library.lock().map_err(state_error)?;
+        let library = guard
+            .as_mut()
+            .ok_or_else(|| library_not_open("consolidating duplicates"))?;
+        consolidate_duplicates(library, groups).map_err(Self::app_error)
     }
 
     pub fn query_catalog(&self, query: &Query, page: Page) -> Result<CatalogPage, AppError> {
@@ -436,6 +630,8 @@ impl DesktopState {
                 job: job.clone(),
                 context: context.clone(),
                 report: None,
+                duplicate_report: None,
+                import_duplicate_report: None,
                 export_report: None,
                 restored_library: None,
             },
@@ -624,6 +820,8 @@ impl DesktopState {
                 job: job.clone(),
                 context: context.clone(),
                 report: None,
+                duplicate_report: None,
+                import_duplicate_report: None,
                 export_report: None,
                 restored_library: None,
             },
@@ -672,15 +870,32 @@ impl DesktopState {
         role: Role,
         thumbnail_edge: Option<u32>,
     ) -> Result<PathBuf, AppError> {
-        let guard = self.library.lock().map_err(state_error)?;
-        let library = guard.as_ref().ok_or_else(|| AppError {
-            code: "LIBRARY_NOT_OPEN".into(),
-            message: "Open a portrait library before browsing portraits.".into(),
-            recoverable: true,
-        })?;
-        match thumbnail_edge {
-            Some(edge) => portrait_core::thumbnails::thumbnail(library, id, role, edge),
-            None => portrait_core::thumbnails::asset_path(library, id, role),
+        // Only the SQLite lookup and managed-path validation need the library
+        // lock. Decoding and encoding PNGs can take seconds for a large grid;
+        // holding this mutex through that work serialised every protocol image
+        // request and blocked catalog commands behind it.
+        let resolved = {
+            let guard = self.library.lock().map_err(state_error)?;
+            let library = guard.as_ref().ok_or_else(|| AppError {
+                code: "LIBRARY_NOT_OPEN".into(),
+                message: "Open a portrait library before browsing portraits.".into(),
+                recoverable: true,
+            })?;
+            match thumbnail_edge {
+                Some(_) => portrait_core::thumbnails::thumbnail_source(library, id, role)
+                    .map(ResolvedAsset::Thumbnail),
+                None => portrait_core::thumbnails::asset_path(library, id, role)
+                    .map(ResolvedAsset::Original),
+            }
+        }
+        .map_err(Self::app_error)?;
+
+        match (resolved, thumbnail_edge) {
+            (ResolvedAsset::Thumbnail(source), Some(edge)) => {
+                portrait_core::thumbnails::thumbnail_from_source(&source, id, role, edge)
+            }
+            (ResolvedAsset::Original(path), None) => Ok(path),
+            _ => unreachable!("thumbnail edge and resolved asset always agree"),
         }
         .map_err(Self::app_error)
     }
@@ -693,6 +908,11 @@ impl DesktopState {
             recoverable: error.recoverable(),
         }
     }
+}
+
+enum ResolvedAsset {
+    Thumbnail(portrait_core::thumbnails::ThumbnailSource),
+    Original(PathBuf),
 }
 
 fn library_not_open(activity: &str) -> AppError {

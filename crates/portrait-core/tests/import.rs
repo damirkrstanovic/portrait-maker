@@ -13,6 +13,7 @@ fn request(path: std::path::PathBuf, resize: bool) -> ImportRequest {
         source_name: "Pack".into(),
         kind: ImportKind::Folder,
         resize,
+        duplicate_policy: Default::default(),
     }
 }
 
@@ -190,6 +191,7 @@ fn cancellation_before_archive_extraction_returns_a_cancelled_report() {
             source_name: "Archive".into(),
             kind: ImportKind::Archive,
             resize: false,
+            duplicate_policy: Default::default(),
         },
         &job,
     )
@@ -359,6 +361,7 @@ fn private_archives_import_complete_sets_with_expected_dimensions() {
             source_name: "p1".into(),
             kind: ImportKind::Archive,
             resize: false,
+            duplicate_policy: Default::default(),
         },
         &JobContext::default(),
     )
@@ -384,6 +387,7 @@ fn private_archives_import_complete_sets_with_expected_dimensions() {
             source_name: "p1".into(),
             kind: ImportKind::Archive,
             resize: true,
+            duplicate_policy: Default::default(),
         },
         &JobContext::default(),
     )
@@ -408,6 +412,7 @@ fn private_archives_import_complete_sets_with_expected_dimensions() {
             source_name: "heroes".into(),
             kind: ImportKind::Archive,
             resize: false,
+            duplicate_policy: Default::default(),
         },
         &JobContext::default(),
     )

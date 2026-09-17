@@ -54,6 +54,7 @@ fn import_job_can_be_cancelled_without_waiting_for_the_library_worker() {
             source_name: "Missing".into(),
             kind: ImportKind::Folder,
             resize: false,
+            duplicate_policy: Default::default(),
         })
         .unwrap();
     state.cancel_job(job.id).unwrap();

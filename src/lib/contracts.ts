@@ -44,6 +44,7 @@ export type ImportRequest = {
   sourceName: string;
   kind: "folder" | "archive" | "game";
   resize: boolean;
+  duplicatePolicy?: "keep" | "skip";
 };
 export type ImportReport = {
   sourceId: Id | null;
@@ -91,3 +92,11 @@ export type DiscoveryReport = { destinations: Destination[]; warnings: string[] 
 export type AppError = { code: string; message: string; recoverable: boolean };
 
 export type ExportReport = { added: number; overwritten: number; removed: number; preserved: number; issues: Issue[] };
+
+export type DuplicateMember = { portrait: Portrait; sourceNames: string[] };
+export type DuplicateGroup = { fingerprint: string; members: DuplicateMember[]; nameConflict: boolean; descriptionConflict: boolean };
+export type DuplicateScanReport = { groups: DuplicateGroup[]; issues: Issue[] };
+export type ImportDuplicateMatch = { folder: string; name: string; matchingPortraitId: string | null; matchingName: string | null; duplicateOfInBatch: string | null };
+export type ImportDuplicateReport = { matches: ImportDuplicateMatch[]; issues: Issue[] };
+export type DuplicateConsolidation = { keepId: string; removeIds: string[] };
+export type DuplicateConsolidationReport = { trashed: number };

@@ -24,6 +24,7 @@ fn seeded(root: &std::path::Path) -> Library {
             source_name: "test".into(),
             kind: ImportKind::Folder,
             resize: false,
+            duplicate_policy: Default::default(),
         },
         &JobContext::default(),
     )

@@ -19,6 +19,7 @@ fn fixture(root: &Path) -> Library {
             source_name: "Original pack".into(),
             kind: ImportKind::Folder,
             resize: false,
+            duplicate_policy: Default::default(),
         },
         &JobContext::default(),
     )

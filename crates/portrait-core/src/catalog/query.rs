@@ -42,9 +42,15 @@ pub fn matching_ids(query: &Query) -> MatchingIds {
     }
     if !query.source_ids.is_empty() {
         clauses.push(format!(
-            "p.source_id IN ({})",
+            "(p.source_id IN ({0}) OR EXISTS (SELECT 1 FROM portrait_sources source_match WHERE source_match.portrait_id = p.id AND source_match.source_id IN ({0})))",
             placeholders(query.source_ids.len())
         ));
+        parameters.extend(
+            query
+                .source_ids
+                .iter()
+                .map(|id| Value::Text(id.to_string())),
+        );
         parameters.extend(
             query
                 .source_ids
@@ -165,7 +171,7 @@ pub fn query_catalog(library: &Library, query: &Query, page: Page) -> Result<Cat
 }
 
 pub fn catalog_facets(library: &Library) -> Result<CatalogFacets> {
-    let mut sources = library.connection().prepare("SELECT s.id, s.name, count(*) FROM sources s JOIN portraits p ON p.source_id = s.id WHERE p.trashed_at IS NULL GROUP BY s.id, s.name ORDER BY s.name COLLATE NOCASE, s.id")?;
+    let mut sources = library.connection().prepare("SELECT s.id, s.name, count(*) FROM sources s JOIN (SELECT id AS portrait_id, source_id FROM portraits UNION SELECT portrait_id, source_id FROM portrait_sources) refs ON refs.source_id = s.id JOIN portraits p ON p.id = refs.portrait_id WHERE p.trashed_at IS NULL GROUP BY s.id, s.name ORDER BY s.name COLLATE NOCASE, s.id")?;
     let sources = sources
         .query_map([], |row| {
             Ok(SourceFacet {

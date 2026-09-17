@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-get-duplicate-scan-report"
+description = "Enables the get_duplicate_scan_report command without any pre-configured scope."
+commands.allow = ["get_duplicate_scan_report"]

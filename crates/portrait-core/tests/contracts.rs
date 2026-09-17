@@ -10,10 +10,11 @@ fn ipc_contracts_serialize_with_camel_case_and_string_unions() {
         source_name: "Heroes".into(),
         kind: ImportKind::Archive,
         resize: false,
+        duplicate_policy: Default::default(),
     };
     assert_eq!(
         serde_json::to_value(request).unwrap(),
-        json!({"path":"/tmp/source", "sourceName":"Heroes", "kind":"archive", "resize":false})
+        json!({"path":"/tmp/source", "sourceName":"Heroes", "kind":"archive", "resize":false, "duplicatePolicy":"keep"})
     );
     assert_eq!(serde_json::to_value(Role::Large).unwrap(), json!("large"));
     assert_eq!(

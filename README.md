@@ -57,6 +57,8 @@ npm run desktop
 
 On Linux, `npm run desktop` first prepares the pinned libarchive dependency automatically; the first run downloads and builds it. Later runs reuse the build. Windows needs the MSVC build tools and libarchive through vcpkg; macOS needs Xcode command-line tools and libarchive 3.8.9+ discoverable by pkg-config. See [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for platform setup.
 
+The development profile optimizes the image and hashing routines while retaining debug symbols and assertions. This keeps duplicate scans responsive without a release build.
+
 `npm run dev` starts only Vite's browser development server. It is useful for frontend work, but it does not start the Tauri desktop shell or provide filesystem/game access.
 
 Run the normal checks when changing the project:
@@ -106,6 +108,18 @@ Use that binary only for local testing. `npm run package:linux` is the supported
 ## Browsing portraits
 
 The grid starts with compact thumbnails (about five columns at the default window size). Use **Zoom** to change card size from **75% to 200%**; the app remembers it. **Small / Medium / Large** chooses the portrait image variant independently of zoom. Click a portrait to preview all three images.
+
+## Duplicate portraits
+
+Imports first scan for exact matches against active library portraits and earlier sets in the same import. A duplicate must have identical decoded pixels and dimensions in **all three sizes**; PNG compression and embedded metadata do not affect matching. Resized images and alternative crops are not exact duplicates. If you enable **Fit and pad**, matching compares the resulting managed images.
+
+When matches are found, review the list and choose **Skip duplicates and import** or **Import anyway**. Skipping retains the existing portrait while adding the incoming source association and inferred labels, respecting labels you previously removed. Portraits in Trash do not cause an incoming set to be skipped.
+
+For existing libraries, choose **Library ▾ → Find duplicates**. Choose the keeper for each group, or uncheck a group to leave it alone. Differing names and descriptions are shown for review. After confirmation, extra copies move to Trash, source associations and labels are combined, selection is retained if any copy was selected, and the keeper retains its name and description. Original metadata remains on the trashed copies. Nothing is permanently deleted by deduplication; empty Trash separately when satisfied.
+
+Pixel fingerprints are cached in SQLite and computed during import. Later scans check file metadata and reuse unchanged fingerprints; edited or missing images invalidate their entries. Existing libraries fill the cache on their first scan. Import review and import reuse validated PNG fingerprints, including when an archive is extracted again. Before moving copies to Trash, the app still revalidates file content rather than relying on modification times.
+
+The first version detects exact matches only. It does not guess whether visually similar artwork is the same portrait.
 
 ## Scale fixture
 

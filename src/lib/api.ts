@@ -1,3 +1,4 @@
+import type { DuplicateScanReport, ImportDuplicateReport, DuplicateConsolidation, DuplicateConsolidationReport } from "./contracts";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { CatalogFacets, CatalogPage, Destination, DiscoveryReport, ExportReport, ExportPlan, ExportRequest, Game, ImportReport, ImportRequest, Job, MetadataPatch, Page, Query, SelectionAction, SelectionTarget } from "./contracts";
@@ -9,6 +10,11 @@ export type LibraryInfo = {
 };
 
 export interface LibraryApi {
+  startDuplicateScan?(): Promise<Job>;
+  getDuplicateScanReport?(id: string): Promise<DuplicateScanReport | null>;
+  startImportDuplicateScan?(request: ImportRequest): Promise<Job>;
+  getImportDuplicateReport?(id: string): Promise<ImportDuplicateReport | null>;
+  consolidateDuplicates?(groups: DuplicateConsolidation[]): Promise<DuplicateConsolidationReport>;
   startBackup?(path: string, confirmedPath: string | null): Promise<Job>;
   startRestore?(archive: string, path: string): Promise<Job>;
   getRestoreResult?(id: string): Promise<LibraryInfo | null>;
@@ -57,6 +63,11 @@ async function chooseDirectory(title: string): Promise<string | null> {
 }
 
 export const desktopApi: LibraryApi = {
+  startDuplicateScan: () => invoke<Job>("start_duplicate_scan"),
+  getDuplicateScanReport: (id) => invoke<DuplicateScanReport | null>("get_duplicate_scan_report", { id }),
+  startImportDuplicateScan: (request) => invoke<Job>("start_import_duplicate_scan", { request }),
+  getImportDuplicateReport: (id) => invoke<ImportDuplicateReport | null>("get_import_duplicate_report", { id }),
+  consolidateDuplicates: (groups) => invoke<DuplicateConsolidationReport>("consolidate_duplicates", { groups }),
   chooseBackupFolder: () => chooseDirectory("Choose a backup folder"),
   startBackup: (path, confirmedPath) => invoke<Job>("start_backup", { path, confirmedPath }),
   startRestore: (archive, path) => invoke<Job>("start_restore", { archive, path }),

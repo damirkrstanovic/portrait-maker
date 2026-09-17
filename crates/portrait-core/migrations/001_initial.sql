@@ -17,6 +17,14 @@ CREATE TABLE IF NOT EXISTS portraits (
     trashed_at TEXT
 ) STRICT;
 
+-- The primary source remains on portraits for compatibility and display. Additional
+-- sources are retained when exact duplicates are skipped or consolidated.
+CREATE TABLE IF NOT EXISTS portrait_sources (
+    portrait_id TEXT NOT NULL REFERENCES portraits(id) ON DELETE CASCADE,
+    source_id TEXT NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+    PRIMARY KEY (portrait_id, source_id)
+) STRICT;
+
 CREATE TABLE IF NOT EXISTS assets (
     portrait_id TEXT NOT NULL REFERENCES portraits(id) ON DELETE CASCADE,
     role TEXT NOT NULL CHECK (role IN ('small', 'medium', 'large')),
@@ -112,7 +120,27 @@ CREATE TABLE IF NOT EXISTS operation_state (
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 ) STRICT;
 
+-- Performance-only caches. Missing entries are recomputed from managed PNG files.
+CREATE TABLE IF NOT EXISTS portrait_fingerprints (
+    portrait_id TEXT PRIMARY KEY NOT NULL REFERENCES portraits(id) ON DELETE CASCADE,
+    algorithm TEXT NOT NULL,
+    fingerprint TEXT NOT NULL,
+    small_stamp TEXT NOT NULL,
+    medium_stamp TEXT NOT NULL,
+    large_stamp TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS pixel_fingerprints (
+    encoded_sha256 TEXT NOT NULL,
+    renderer TEXT NOT NULL,
+    pixel_hash TEXT NOT NULL,
+    width INTEGER NOT NULL CHECK (width > 0),
+    height INTEGER NOT NULL CHECK (height > 0),
+    PRIMARY KEY (encoded_sha256, renderer)
+) STRICT;
+
 CREATE INDEX IF NOT EXISTS portraits_source_id_idx ON portraits(source_id);
+CREATE INDEX IF NOT EXISTS portrait_sources_source_id_idx ON portrait_sources(source_id);
 CREATE INDEX IF NOT EXISTS portraits_trashed_at_idx ON portraits(trashed_at);
 CREATE INDEX IF NOT EXISTS portrait_labels_label_id_idx ON portrait_labels(label_id);
 

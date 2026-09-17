@@ -1,6 +1,7 @@
 pub mod backup;
 pub mod catalog;
 pub mod discovery;
+pub mod duplicate;
 pub mod error;
 pub mod import;
 pub mod library;

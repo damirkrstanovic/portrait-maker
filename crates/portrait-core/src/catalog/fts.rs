@@ -51,7 +51,13 @@ pub fn refresh_search_document(transaction: &Transaction<'_>, id: Uuid) -> Resul
     transaction.execute(
         "INSERT INTO search_documents \
             (portrait_id, name, original_folder, source_name, labels, description) \
-         SELECT p.id, p.name, p.original_folder, s.name, \
+         SELECT p.id, p.name, p.original_folder, COALESCE(( \
+                    SELECT group_concat(source_name, ' ') FROM ( \
+                        SELECT s2.name AS source_name FROM portrait_sources ps \
+                        JOIN sources s2 ON s2.id = ps.source_id \
+                        WHERE ps.portrait_id = p.id ORDER BY s2.name COLLATE NOCASE \
+                    ) \
+                ), s.name), \
                 COALESCE(( \
                     SELECT group_concat(label_value, ' ') FROM ( \
                         SELECT l.display_value AS label_value \
@@ -86,10 +92,14 @@ pub fn refresh_search_document(transaction: &Transaction<'_>, id: Uuid) -> Resul
 
 pub fn refresh_source_documents(transaction: &Transaction<'_>, source_id: Uuid) -> Result<u64> {
     let ids = {
-        let mut statement =
-            transaction.prepare("SELECT id FROM portraits WHERE source_id = ?1 ORDER BY id")?;
+        let mut statement = transaction.prepare(
+            "SELECT id FROM portraits WHERE source_id = ?1 \
+             UNION SELECT portrait_id FROM portrait_sources WHERE source_id = ?2 ORDER BY 1",
+        )?;
         statement
-            .query_map([source_id.to_string()], |row| row.get::<_, String>(0))?
+            .query_map([source_id.to_string(), source_id.to_string()], |row| {
+                row.get::<_, String>(0)
+            })?
             .collect::<std::result::Result<Vec<_>, _>>()?
     };
     for id in &ids {

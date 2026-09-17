@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-consolidate-duplicates"
+description = "Enables the consolidate_duplicates command without any pre-configured scope."
+commands.allow = ["consolidate_duplicates"]

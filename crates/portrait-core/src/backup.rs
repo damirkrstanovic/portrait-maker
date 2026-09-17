@@ -66,6 +66,10 @@ pub fn backup_library_confirmed(
         "DELETE FROM operation_state WHERE kind='export_receipt'",
         [],
     )?;
+    // Derived hashes are not portable authority. Rebuilding them after restore prevents an
+    // untrusted archive cache from influencing a future skip/consolidation decision.
+    connection
+        .execute_batch("DELETE FROM portrait_fingerprints; DELETE FROM pixel_fingerprints;")?;
     drop(connection);
     let connection = Connection::open_with_flags(&database, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let paths = validate_database(&connection, lib.root(), job)?;
@@ -190,6 +194,11 @@ pub fn restore_library(archive: &Path, root: &Path, job: &JobContext) -> Result<
         "DELETE FROM operation_state WHERE kind='export_receipt'",
         [],
     )?;
+    let version: u32 = connection.pragma_query_value(None, "user_version", |r| r.get(0))?;
+    if version >= 4 {
+        connection
+            .execute_batch("DELETE FROM portrait_fingerprints; DELETE FROM pixel_fingerprints;")?;
+    }
     drop(connection);
     let allowed: HashSet<_> = paths
         .into_iter()
@@ -250,8 +259,16 @@ fn validate_database(
     }
     let actual = schema(connection)?;
     let mut expected = schema(&expected)?;
+    if version < 3 {
+        expected.remove("portrait_sources");
+        expected.remove("portrait_sources_source_id_idx");
+    }
     if version == 1 && !actual.contains_key("user_label_suppressions") {
         expected.remove("user_label_suppressions");
+    }
+    if version < 4 {
+        expected.remove("portrait_fingerprints");
+        expected.remove("pixel_fingerprints");
     }
     if actual != expected {
         return Err(invalid(

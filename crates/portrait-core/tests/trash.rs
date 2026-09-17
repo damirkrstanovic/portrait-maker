@@ -144,6 +144,7 @@ fn repeated_import_of_trashed_content_creates_a_separate_active_portrait() {
         source_name: "Repeated pack".into(),
         kind: ImportKind::Folder,
         resize: false,
+        duplicate_policy: Default::default(),
     };
     import_portraits(&mut library, request.clone(), &JobContext::default()).unwrap();
     let first = page(&library, Query::default()).items[0].id;

@@ -6,7 +6,7 @@ use rusqlite::{Connection, MAIN_DB};
 
 use crate::error::{CoreError, Result};
 
-pub(crate) const CURRENT_SCHEMA_VERSION: u32 = 2;
+pub(crate) const CURRENT_SCHEMA_VERSION: u32 = 4;
 const INITIAL_SCHEMA: &str = include_str!("../../migrations/001_initial.sql");
 
 pub(super) fn apply(
@@ -40,6 +40,14 @@ pub(super) fn apply(
         transaction
             .execute(
                 "INSERT OR IGNORE INTO user_label_suppressions (portrait_id, category, normalized_value) SELECT portrait_id, category, normalized_value FROM suppressed_inferred_labels",
+                [],
+            )
+            .map_err(|error| CoreError::Migration(error.to_string()))?;
+    }
+    if version < 3 {
+        transaction
+            .execute(
+                "INSERT OR IGNORE INTO portrait_sources (portrait_id, source_id) SELECT id, source_id FROM portraits",
                 [],
             )
             .map_err(|error| CoreError::Migration(error.to_string()))?;

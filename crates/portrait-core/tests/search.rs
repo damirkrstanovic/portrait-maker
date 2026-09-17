@@ -464,6 +464,7 @@ fn import_updates_the_search_index_in_the_same_commit() {
             source_name: "Curated Pack".into(),
             kind: ImportKind::Folder,
             resize: false,
+            duplicate_policy: Default::default(),
         },
         &JobContext::default(),
     )

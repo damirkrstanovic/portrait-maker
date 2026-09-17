@@ -1,5 +1,5 @@
 pub mod archive;
-mod scan;
+pub(crate) mod scan;
 mod unicode_casefold;
 pub(crate) mod validate;
 
@@ -8,6 +8,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -19,7 +20,9 @@ use uuid::Uuid;
 use crate::catalog::{bump_catalog_revision, refresh_search_document};
 use crate::library::Library;
 use crate::metadata::infer_labels;
-use crate::types::{ImportKind, ImportReport, ImportRequest, Issue, IssueSeverity, Label, Role};
+use crate::types::{
+    DuplicatePolicy, ImportKind, ImportReport, ImportRequest, Issue, IssueSeverity, Label, Role,
+};
 use crate::{CoreError, Result};
 
 pub use validate::{AssetSpec, validate_portrait};
@@ -136,6 +139,28 @@ pub fn import_portraits(
         }
     };
     let total = scanned.len() as u64;
+    // Pixel fingerprints are computed during the import itself, including Keep imports. This
+    // seeds later duplicate reviews without decoding the same PNGs again.
+    let mut fingerprint_cache = crate::duplicate::FingerprintCache::new();
+    // A single scan keeps duplicate-aware imports linear. Trashed rows are intentionally
+    // absent, so importing a trashed portrait creates a usable active copy.
+    let mut active_fingerprints = if request.duplicate_policy == DuplicatePolicy::Skip {
+        match crate::duplicate::active_fingerprints(library, job) {
+            Ok(fingerprints) => fingerprints,
+            Err(error) => {
+                if let Some(staging) = extracted {
+                    let _ = fs::remove_dir_all(staging);
+                }
+                if matches!(error, CoreError::Cancelled) {
+                    report.cancelled = true;
+                    return Ok(report);
+                }
+                return Err(error);
+            }
+        }
+    } else {
+        HashMap::new()
+    };
     let mut source_id = None;
     for (index, candidate) in scanned.into_iter().enumerate() {
         if job.is_cancelled() {
@@ -149,6 +174,28 @@ pub fn import_portraits(
                 report.issues.push(issue(
                     &candidate.context_folder,
                     error,
+                    IssueSeverity::Error,
+                ));
+                job.report_progress((index + 1) as u64, Some(total));
+                continue;
+            }
+        };
+        let fingerprint = match crate::duplicate::fingerprint_assets_cached(
+            library.connection(),
+            &mut fingerprint_cache,
+            assets,
+            request.resize,
+        ) {
+            Ok(fingerprint) => Some(fingerprint),
+            Err(CoreError::Cancelled) => {
+                report.cancelled = true;
+                break;
+            }
+            Err(error) => {
+                report.skipped += 1;
+                report.issues.push(issue(
+                    &candidate.context_folder,
+                    &error,
                     IssueSeverity::Error,
                 ));
                 job.report_progress((index + 1) as u64, Some(total));
@@ -172,23 +219,62 @@ pub fn import_portraits(
                 });
             }
         }
-        match stage_and_commit(library, &request, &candidate, assets, source_id, job) {
-            Ok(committed_source) => {
-                source_id = Some(committed_source);
-                report.source_id = source_id;
-                report.imported += 1;
+        if let Some(existing_portrait) = fingerprint
+            .as_ref()
+            .and_then(|value| active_fingerprints.get(value))
+            .copied()
+        {
+            match attach_duplicate(
+                library,
+                &request,
+                existing_portrait,
+                source_id,
+                &candidate.inference_path,
+            ) {
+                Ok(committed_source) => {
+                    source_id = Some(committed_source);
+                    report.source_id = source_id;
+                    report.skipped += 1;
+                }
+                Err(error) => {
+                    report.skipped += 1;
+                    report.issues.push(issue(
+                        &candidate.context_folder,
+                        &error,
+                        IssueSeverity::Error,
+                    ));
+                }
             }
-            Err(CoreError::Cancelled) => {
-                report.cancelled = true;
-                break;
-            }
-            Err(error) => {
-                report.skipped += 1;
-                report.issues.push(issue(
-                    &candidate.context_folder,
-                    &error,
-                    IssueSeverity::Error,
-                ));
+        } else {
+            match stage_and_commit(
+                library,
+                &request,
+                &candidate,
+                assets,
+                source_id,
+                job,
+                &mut fingerprint_cache,
+            ) {
+                Ok(committed) => {
+                    source_id = Some(committed.source_id);
+                    report.source_id = source_id;
+                    report.imported += 1;
+                    if request.duplicate_policy == DuplicatePolicy::Skip {
+                        active_fingerprints.insert(committed.fingerprint, committed.portrait_id);
+                    }
+                }
+                Err(CoreError::Cancelled) => {
+                    report.cancelled = true;
+                    break;
+                }
+                Err(error) => {
+                    report.skipped += 1;
+                    report.issues.push(issue(
+                        &candidate.context_folder,
+                        &error,
+                        IssueSeverity::Error,
+                    ));
+                }
             }
         }
         job.report_progress((index + 1) as u64, Some(total));
@@ -196,6 +282,7 @@ pub fn import_portraits(
     if let Some(staging) = extracted {
         let _ = fs::remove_dir_all(staging);
     }
+    fingerprint_cache.flush(library.connection())?;
     Ok(report)
 }
 
@@ -221,6 +308,12 @@ fn reject_library_overlap(library_root: &Path, source: &Path) -> Result<()> {
     Ok(())
 }
 
+struct ImportCommit {
+    source_id: Uuid,
+    portrait_id: Uuid,
+    fingerprint: String,
+}
+
 fn stage_and_commit(
     library: &mut Library,
     request: &ImportRequest,
@@ -228,7 +321,8 @@ fn stage_and_commit(
     assets: &[AssetSpec],
     existing_source: Option<Uuid>,
     job: &JobContext,
-) -> Result<Uuid> {
+    fingerprint_cache: &mut crate::duplicate::FingerprintCache,
+) -> Result<ImportCommit> {
     let portrait_id = Uuid::new_v4();
     let operation_id = Uuid::new_v4();
     let staging = library
@@ -274,6 +368,24 @@ fn stage_and_commit(
             return Err(CoreError::Cancelled);
         }
         fs::rename(&staging, &final_path)?;
+        // Cache the actual managed files. In particular, this does not attach source-file
+        // stamps to a copied/resized library asset.
+        let managed_assets = outputs
+            .iter()
+            .map(|(role, filename, width, height, _)| AssetSpec {
+                role: *role,
+                original_path: final_path.join(filename),
+                width: *width,
+                height: *height,
+            })
+            .collect::<Vec<_>>();
+        let managed_stamps = crate::duplicate::asset_stamps(&managed_assets)?;
+        let managed_fingerprint = crate::duplicate::fingerprint_assets_cached(
+            library.connection(),
+            fingerprint_cache,
+            &managed_assets,
+            false,
+        )?;
         let source_id = existing_source.unwrap_or_else(Uuid::new_v4);
         let transaction = library.connection().unchecked_transaction()?;
         if existing_source.is_none() {
@@ -296,6 +408,10 @@ fn stage_and_commit(
             "INSERT INTO portraits (id, source_id, name, original_folder, provenance) VALUES (?1, ?2, ?3, ?4, ?5)",
             params![portrait_id.to_string(), source_id.to_string(), name, candidate.original_folder, "import-v1"],
         )?;
+        transaction.execute(
+            "INSERT INTO portrait_sources (portrait_id, source_id) VALUES (?1, ?2)",
+            params![portrait_id.to_string(), source_id.to_string()],
+        )?;
         for (role, filename, width, height, size) in outputs {
             transaction.execute(
                 "INSERT INTO assets (portrait_id, role, relative_path, width, height, file_size) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
@@ -310,7 +426,20 @@ fn stage_and_commit(
             [operation_id.to_string()],
         )?;
         transaction.commit()?;
-        Ok(source_id)
+        // A modified file must never be paired with a fingerprint calculated from earlier
+        // bytes. It simply remains uncached and will be safely recalculated on review.
+        if crate::duplicate::asset_stamps(&managed_assets)? == managed_stamps {
+            fingerprint_cache.record_managed(
+                portrait_id,
+                managed_fingerprint.clone(),
+                managed_stamps,
+            );
+        }
+        Ok(ImportCommit {
+            source_id,
+            portrait_id,
+            fingerprint: managed_fingerprint,
+        })
     })();
     if result.is_err() {
         let _ = fs::remove_dir_all(&staging);
@@ -334,6 +463,37 @@ fn stage_and_commit(
     result
 }
 
+fn attach_duplicate(
+    library: &mut Library,
+    request: &ImportRequest,
+    portrait_id: Uuid,
+    existing_source: Option<Uuid>,
+    inference_path: &str,
+) -> Result<Uuid> {
+    let transaction = library.connection().unchecked_transaction()?;
+    let source_id = existing_source.unwrap_or_else(Uuid::new_v4);
+    if existing_source.is_none() {
+        transaction.execute(
+            "INSERT INTO sources (id, name, kind, original_location) VALUES (?1, ?2, ?3, ?4)",
+            params![
+                source_id.to_string(),
+                request.source_name,
+                import_kind(request.kind),
+                request.path.to_string_lossy()
+            ],
+        )?;
+    }
+    transaction.execute(
+        "INSERT OR IGNORE INTO portrait_sources (portrait_id, source_id) VALUES (?1, ?2)",
+        params![portrait_id.to_string(), source_id.to_string()],
+    )?;
+    insert_labels(&transaction, portrait_id, inference_path)?;
+    refresh_search_document(&transaction, portrait_id)?;
+    bump_catalog_revision(&transaction)?;
+    transaction.commit()?;
+    Ok(source_id)
+}
+
 fn insert_labels(
     transaction: &rusqlite::Transaction<'_>,
     portrait_id: Uuid,
@@ -350,8 +510,11 @@ fn insert_labels(
             |row| row.get(0),
         )?;
         transaction.execute(
-            "INSERT INTO portrait_labels (portrait_id, label_id, origin, producer, producer_version) VALUES (?1, ?2, 'filename', 'path-vocabulary', '1')",
-            params![portrait_id.to_string(), label_id],
+            "INSERT INTO portrait_labels (portrait_id, label_id, origin, producer, producer_version) \
+             SELECT ?1, ?2, 'filename', 'path-vocabulary', '1' \
+             WHERE NOT EXISTS (SELECT 1 FROM user_label_suppressions WHERE portrait_id = ?1 AND category = ?3 AND normalized_value = ?4) \
+             ON CONFLICT(portrait_id, label_id) DO NOTHING",
+            params![portrait_id.to_string(), label_id, category, value],
         )?;
     }
     Ok(())

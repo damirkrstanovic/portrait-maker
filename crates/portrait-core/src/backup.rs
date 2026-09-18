@@ -270,6 +270,9 @@ fn validate_database(
         expected.remove("portrait_fingerprints");
         expected.remove("pixel_fingerprints");
     }
+    if version < 5 {
+        expected.remove("portrait_analysis");
+    }
     if actual != expected {
         return Err(invalid(
             "Database schema does not match a supported portrait library.",

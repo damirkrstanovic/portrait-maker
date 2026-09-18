@@ -596,8 +596,8 @@ fn group(library: &Library, fingerprint: String, ids: &[Uuid]) -> Result<Duplica
 
 fn portrait(library: &Library, id: Uuid) -> Result<Portrait> {
     let mut result = library.connection().query_row(
-        "SELECT p.id,p.source_id,p.name,s.name,p.original_folder,p.description, EXISTS(SELECT 1 FROM selection x WHERE x.portrait_id=p.id),p.trashed_at FROM portraits p JOIN sources s ON s.id=p.source_id WHERE p.id=?1",
-        [id.to_string()], |row| Ok(Portrait { id: Uuid::parse_str(&row.get::<_,String>(0)?).map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?, source_id: Uuid::parse_str(&row.get::<_,String>(1)?).map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?, name:row.get(2)?, source_name:row.get(3)?, original_folder:row.get(4)?, description:row.get(5)?, labels:Vec::new(), selected:row.get(6)?, trashed_at:row.get(7)? }))?;
+        "SELECT p.id,p.source_id,p.name,s.name,p.original_folder,p.description,pa.description, EXISTS(SELECT 1 FROM selection x WHERE x.portrait_id=p.id),p.trashed_at FROM portraits p JOIN sources s ON s.id=p.source_id LEFT JOIN portrait_analysis pa ON pa.portrait_id=p.id WHERE p.id=?1",
+        [id.to_string()], |row| Ok(Portrait { id: Uuid::parse_str(&row.get::<_,String>(0)?).map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?, source_id: Uuid::parse_str(&row.get::<_,String>(1)?).map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?, name:row.get(2)?, source_name:row.get(3)?, original_folder:row.get(4)?, description:row.get(5)?, model_description:row.get(6)?, labels:Vec::new(), selected:row.get(7)?, trashed_at:row.get(8)? }))?;
     let mut labels = library.connection().prepare("SELECT l.category,l.normalized_value FROM portrait_labels pl JOIN labels l ON l.id=pl.label_id WHERE pl.portrait_id=?1 ORDER BY l.category,l.normalized_value")?;
     result.labels = labels
         .query_map([id.to_string()], |r| {

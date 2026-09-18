@@ -6,7 +6,7 @@ use rusqlite::{Connection, MAIN_DB};
 
 use crate::error::{CoreError, Result};
 
-pub(crate) const CURRENT_SCHEMA_VERSION: u32 = 4;
+pub(crate) const CURRENT_SCHEMA_VERSION: u32 = 5;
 const INITIAL_SCHEMA: &str = include_str!("../../migrations/001_initial.sql");
 
 pub(super) fn apply(

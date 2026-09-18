@@ -1,5 +1,7 @@
 fn main() {
     let manifest = tauri_build::AppManifest::new().commands(&[
+        "get_analysis_settings",
+        "start_analysis",
         "start_backup",
         "start_restore",
         "get_restore_result",

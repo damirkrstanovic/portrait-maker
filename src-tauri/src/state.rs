@@ -1,3 +1,6 @@
+mod analysis;
+pub use analysis::{AnalysisRequest, AnalysisSettings};
+
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -35,6 +38,7 @@ pub struct DesktopState {
     library: Arc<Mutex<Option<Library>>>,
     jobs: Arc<Mutex<HashMap<Uuid, LibraryJob>>>,
     settings: SettingsStore,
+    analysis_running: Arc<std::sync::atomic::AtomicBool>,
     exports: crate::export_store::ExportStore,
 }
 
@@ -56,6 +60,7 @@ impl DesktopState {
             jobs: Arc::new(Mutex::new(HashMap::new())),
             exports: crate::export_store::ExportStore::new(&config_dir),
             settings: SettingsStore::new(config_dir),
+            analysis_running: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         }
     }
 

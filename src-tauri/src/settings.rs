@@ -12,6 +12,8 @@ struct Settings {
     display_role: Option<Role>,
     #[serde(default)]
     destinations: Vec<Destination>,
+    #[serde(default)]
+    analysis: crate::state::AnalysisSettings,
 }
 
 #[derive(Clone)]
@@ -20,6 +22,13 @@ pub(crate) struct SettingsStore {
 }
 
 impl SettingsStore {
+    pub(crate) fn analysis_log_path(&self) -> PathBuf {
+        self.path
+            .parent()
+            .expect("settings has a parent")
+            .join("logs/analysis-errors.jsonl")
+    }
+
     pub(crate) fn new(config_dir: PathBuf) -> Self {
         Self {
             path: config_dir.join("settings.json"),
@@ -61,6 +70,24 @@ impl SettingsStore {
             .destinations
             .retain(|saved| !(saved.game == destination.game && saved.path == destination.path));
         settings.destinations.push(destination);
+        self.write(&settings)
+    }
+
+    pub(crate) fn analysis(&self) -> Result<crate::state::AnalysisSettings, AppError> {
+        let mut analysis = self.read()?.analysis;
+        // Correct the original default if it was already saved locally.
+        if analysis.endpoint == "http://lizard10:8080/v1/chat/completions" {
+            analysis.endpoint = crate::state::AnalysisSettings::default().endpoint;
+        }
+        Ok(analysis)
+    }
+
+    pub(crate) fn remember_analysis(
+        &self,
+        config: crate::state::AnalysisSettings,
+    ) -> Result<(), AppError> {
+        let mut settings = self.read()?;
+        settings.analysis = config;
         self.write(&settings)
     }
 

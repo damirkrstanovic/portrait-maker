@@ -1,6 +1,7 @@
 mod support;
 use portrait_core::{
     Library,
+    analysis::{PortraitAnalysis, save_analysis},
     backup::{backup_library, backup_library_confirmed, restore_library},
     import::{JobContext, import_portraits},
     types::{ImportKind, ImportRequest},
@@ -46,7 +47,23 @@ fn rows(lib: &Library, table: &str) -> Vec<String> {
 #[test]
 fn complete_roundtrip_and_focused_safety_checks() {
     let temp = tempfile::tempdir().unwrap();
-    let lib = fixture(temp.path());
+    let mut lib = fixture(temp.path());
+    let portrait: String = lib
+        .connection()
+        .query_row("SELECT id FROM portraits ORDER BY id LIMIT 1", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    save_analysis(
+        &mut lib,
+        uuid::Uuid::parse_str(&portrait).unwrap(),
+        &PortraitAnalysis {
+            description: "A model-generated backup fixture description.".into(),
+            labels: Vec::new(),
+        },
+        "fixture-model",
+    )
+    .unwrap();
     let zip = temp.path().join("backup.zip");
     backup_library(&lib, &zip, &JobContext::default()).unwrap();
     let restored =
@@ -55,6 +72,7 @@ fn complete_roundtrip_and_focused_safety_checks() {
     for table in [
         "sources",
         "portraits",
+        "portrait_analysis",
         "assets",
         "labels",
         "portrait_labels",
@@ -110,6 +128,42 @@ fn complete_roundtrip_and_focused_safety_checks() {
         )
         .is_err()
     );
+}
+
+#[test]
+fn restores_a_schema_four_backup_then_migrates_analysis_storage() {
+    let temp = tempfile::tempdir().unwrap();
+    let lib = fixture(temp.path());
+    lib.connection()
+        .execute("DROP TABLE portrait_analysis", [])
+        .unwrap();
+    lib.connection()
+        .pragma_update(None, "user_version", 4)
+        .unwrap();
+
+    let archive = temp.path().join("schema-four.zip");
+    backup_library(&lib, &archive, &JobContext::default()).unwrap();
+    let restored = restore_library(
+        &archive,
+        &temp.path().join("restored-v4"),
+        &JobContext::default(),
+    )
+    .unwrap();
+
+    let version: u32 = restored
+        .connection()
+        .pragma_query_value(None, "user_version", |row| row.get(0))
+        .unwrap();
+    assert_eq!(version, 5);
+    let table: String = restored
+        .connection()
+        .query_row(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'portrait_analysis'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(table, "portrait_analysis");
 }
 #[test]
 fn malformed_backup_never_promotes() {

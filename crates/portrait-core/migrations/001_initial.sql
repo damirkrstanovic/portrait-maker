@@ -17,6 +17,16 @@ CREATE TABLE IF NOT EXISTS portraits (
     trashed_at TEXT
 ) STRICT;
 
+-- Model-generated analysis deliberately lives apart from the user's note above.
+-- Re-running a model can replace this row without disturbing user-authored data.
+CREATE TABLE IF NOT EXISTS portrait_analysis (
+    portrait_id TEXT PRIMARY KEY NOT NULL REFERENCES portraits(id) ON DELETE CASCADE,
+    description TEXT NOT NULL,
+    model TEXT NOT NULL,
+    prompt_version TEXT NOT NULL,
+    analyzed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+) STRICT;
+
 -- The primary source remains on portraits for compatibility and display. Additional
 -- sources are retained when exact duplicates are skipped or consolidated.
 CREATE TABLE IF NOT EXISTS portrait_sources (

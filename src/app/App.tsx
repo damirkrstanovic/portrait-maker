@@ -1,3 +1,4 @@
+import { AnalysisDialog } from "../features/analysis/AnalysisDialog";
 import { DuplicateDialog } from "../features/duplicates/DuplicateDialog";
 import { BackupDialog } from "../features/backup/BackupDialog";
 import { ExportProgress } from "../features/export/ExportProgress";
@@ -38,6 +39,7 @@ export function App({ api = desktopApi }: Props) {
   const [library, setLibrary] = useState<LibraryInfo | null>(null);
   const [lastLibraryPath, setLastLibraryPath] = useState<string | null>(null);
   const [portableMode, setPortableMode] = useState<"backup" | "restore" | null>(null);
+  const [showAnalysis, setShowAnalysis] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [duplicateReview, setDuplicateReview] = useState<{ request?: ImportRequest } | null>(null);
   const [showImport, setShowImport] = useState(false);
@@ -124,6 +126,7 @@ export function App({ api = desktopApi }: Props) {
     try {
       await api.closeLibrary();
       setLibrary(null);
+      setShowAnalysis(false);
     } catch (caught) {
       setError(asAppError(caught));
     } finally {
@@ -184,8 +187,9 @@ export function App({ api = desktopApi }: Props) {
 
   if (library) {
     return (
-      <AppLayout onFindDuplicates={api.startDuplicateScan ? () => setDuplicateReview({}) : undefined} library={library} busy={busy} onImport={() => setShowImport(true)} onExport={() => setShowExport(true)} onDestinations={() => { setDestinationError(null); setShowDestinations(true); setShowDestinationEditor(false); void refreshDestinations(); }} destinationsTriggerRef={destinationsTrigger} onBackup={() => setPortableMode("backup")} onCloseLibrary={closeLibrary}>
+      <AppLayout onAnalyze={api.startAnalysis ? () => setShowAnalysis(true) : undefined} onFindDuplicates={api.startDuplicateScan ? () => setDuplicateReview({}) : undefined} library={library} busy={busy} onImport={() => setShowImport(true)} onExport={() => setShowExport(true)} onDestinations={() => { setDestinationError(null); setShowDestinations(true); setShowDestinationEditor(false); void refreshDestinations(); }} destinationsTriggerRef={destinationsTrigger} onBackup={() => setPortableMode("backup")} onCloseLibrary={closeLibrary}>
         {error ? <div className="error-notice" role="alert"><span>{error.message}</span></div> : null}
+        {api.startAnalysis && <AnalysisDialog key={library.id} api={api} visible={showAnalysis} onChanged={() => setCatalogRefresh(current => current + 1)} onClose={() => { setShowAnalysis(false); requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(".library-menu > button")?.focus()); }} />}
         <CatalogBrowser api={api} onImport={() => setShowImport(true)} refreshKey={catalogRefresh} />
         {portableMode === "backup" && <BackupDialog api={api} mode="backup" onClose={() => { setPortableMode(null); requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(".library-menu > button")?.focus()); }} />}
         {showExport ? <ExportDialog api={api} onClose={() => setShowExport(false)} onStarted={(next) => { setJobKind("export"); setExportReport(null); setJob(next); }} /> : null}

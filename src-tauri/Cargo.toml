@@ -20,6 +20,8 @@ serde_json.workspace = true
 uuid.workspace = true
 tauri = { version = "2.9", features = [] }
 tauri-plugin-dialog = "2.6"
+reqwest = { version = "0.13.4", default-features = false, features = ["blocking", "json", "rustls"] }
+base64 = "0.22.1"
 
 [build-dependencies]
 tauri-build = { version = "2.5", features = [] }

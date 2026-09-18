@@ -370,3 +370,18 @@ pub(crate) fn get_restore_result(
     let id = uuid::Uuid::parse_str(&id).map_err(worker_error)?;
     state.restored_library(id)
 }
+
+#[tauri::command]
+pub(crate) fn get_analysis_settings(
+    state: State<'_, DesktopState>,
+) -> Result<crate::state::AnalysisSettings, AppError> {
+    state.analysis_settings()
+}
+
+#[tauri::command]
+pub(crate) fn start_analysis(
+    request: crate::state::AnalysisRequest,
+    state: State<'_, DesktopState>,
+) -> Result<Job, AppError> {
+    state.start_analysis(request)
+}

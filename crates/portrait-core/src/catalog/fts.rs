@@ -66,8 +66,9 @@ pub fn refresh_search_document(transaction: &Transaction<'_>, id: Uuid) -> Resul
                         WHERE pl.portrait_id = p.id \
                         ORDER BY l.category, l.normalized_value \
                     ) \
-                ), ''), COALESCE(p.description, '') \
+                ), ''), trim(COALESCE(p.description, '') || ' ' || COALESCE(pa.description, '')) \
          FROM portraits p JOIN sources s ON s.id = p.source_id \
+         LEFT JOIN portrait_analysis pa ON pa.portrait_id = p.id \
          WHERE p.id = ?1",
         [id.to_string()],
     )?;

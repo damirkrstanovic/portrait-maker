@@ -43,6 +43,8 @@
     "allow-get-export-report",
     "allow-start-backup",
     "allow-start-restore",
-    "allow-get-restore-result"
+    "allow-get-restore-result",
+    "allow-get-analysis-settings",
+    "allow-start-analysis"
   ]
 }

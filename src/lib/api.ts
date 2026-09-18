@@ -1,3 +1,4 @@
+import type { AnalysisSettings, AnalysisRequest } from "./contracts";
 import type { DuplicateScanReport, ImportDuplicateReport, DuplicateConsolidation, DuplicateConsolidationReport } from "./contracts";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -10,6 +11,8 @@ export type LibraryInfo = {
 };
 
 export interface LibraryApi {
+  getAnalysisSettings?(): Promise<AnalysisSettings>;
+  startAnalysis?(request: AnalysisRequest): Promise<Job>;
   startDuplicateScan?(): Promise<Job>;
   getDuplicateScanReport?(id: string): Promise<DuplicateScanReport | null>;
   startImportDuplicateScan?(request: ImportRequest): Promise<Job>;
@@ -63,6 +66,8 @@ async function chooseDirectory(title: string): Promise<string | null> {
 }
 
 export const desktopApi: LibraryApi = {
+  getAnalysisSettings: () => invoke<AnalysisSettings>("get_analysis_settings"),
+  startAnalysis: (request) => invoke<Job>("start_analysis", { request }),
   startDuplicateScan: () => invoke<Job>("start_duplicate_scan"),
   getDuplicateScanReport: (id) => invoke<DuplicateScanReport | null>("get_duplicate_scan_report", { id }),
   startImportDuplicateScan: (request) => invoke<Job>("start_import_duplicate_scan", { request }),

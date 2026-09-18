@@ -247,3 +247,17 @@ button:disabled { cursor: wait; opacity: .56; }
 .duplicate-import-matches span { color: var(--muted); font-size: 13px; }
 .duplicate-pages { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 16px 0; }
 .duplicate-dialog footer { flex-wrap: wrap; }
+
+.analysis-dialog { width: min(680px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; }
+.analysis-dialog > p { color: var(--muted); line-height: 1.5; }
+.analysis-settings, .analysis-scope { display: grid; gap: 12px; margin: 18px 0; border: 1px solid var(--line); }
+.analysis-settings label { display: grid; gap: 6px; }
+.analysis-settings input { width: 100%; min-width: 0; }
+.analysis-settings p { color: var(--muted); font-size: 13px; margin: 0; }
+.analysis-scope label { display: flex; align-items: baseline; gap: 8px; }
+.analysis-progress { overflow-wrap: anywhere; }
+.analysis-progress progress { width: 100%; }
+.portrait-model-description { padding: 12px; background: var(--paper); border: 1px solid var(--line); margin: 12px 0; }
+.portrait-model-description h3 { margin-top: 0; }
+.portrait-model-description p { white-space: pre-wrap; line-height: 1.5; }
+.portrait-model-description small { color: var(--muted); }

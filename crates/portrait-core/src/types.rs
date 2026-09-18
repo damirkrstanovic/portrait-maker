@@ -116,6 +116,8 @@ pub struct Portrait {
     pub source_name: String,
     pub original_folder: String,
     pub description: Option<String>,
+    #[serde(default)]
+    pub model_description: Option<String>,
     pub labels: Vec<Label>,
     pub selected: bool,
     pub trashed_at: Option<String>,

@@ -25,6 +25,7 @@ export type Portrait = {
   sourceName: string;
   originalFolder: string;
   description: string | null;
+  modelDescription?: string | null;
   labels: Label[];
   selected: boolean;
   trashedAt: string | null;
@@ -100,3 +101,6 @@ export type ImportDuplicateMatch = { folder: string; name: string; matchingPortr
 export type ImportDuplicateReport = { matches: ImportDuplicateMatch[]; issues: Issue[] };
 export type DuplicateConsolidation = { keepId: string; removeIds: string[] };
 export type DuplicateConsolidationReport = { trashed: number };
+
+export type AnalysisSettings = { endpoint: string; model: string; apiKeyPath: string };
+export type AnalysisRequest = AnalysisSettings & { selectedOnly: boolean; overwrite: boolean };

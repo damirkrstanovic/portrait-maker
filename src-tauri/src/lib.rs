@@ -30,6 +30,8 @@ pub fn run() {
             });
         })
         .invoke_handler(tauri::generate_handler![
+            commands::get_analysis_settings,
+            commands::start_analysis,
             commands::start_backup,
             commands::start_restore,
             commands::get_restore_result,

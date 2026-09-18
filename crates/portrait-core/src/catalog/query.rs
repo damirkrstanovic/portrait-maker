@@ -121,12 +121,13 @@ pub fn query_catalog(library: &Library, query: &Query, page: Page) -> Result<Cat
     page_parameters.push(Value::Integer(i64::from(page.offset)));
     let sql = format!(
         "WITH matching_ids AS ({}) \
-         SELECT p.id, p.source_id, p.name, s.name, p.original_folder, p.description, \
+         SELECT p.id, p.source_id, p.name, s.name, p.original_folder, p.description, pa.description, \
                 EXISTS(SELECT 1 FROM selection chosen WHERE chosen.portrait_id = p.id), \
                 p.trashed_at \
          FROM matching_ids m \
          JOIN portraits p ON p.id = m.id \
          JOIN sources s ON s.id = p.source_id \
+         LEFT JOIN portrait_analysis pa ON pa.portrait_id = p.id \
          ORDER BY {order} LIMIT ? OFFSET ?",
         matching.sql
     );
@@ -139,9 +140,10 @@ pub fn query_catalog(library: &Library, query: &Query, page: Page) -> Result<Cat
             source_name: row.get(3)?,
             original_folder: row.get(4)?,
             description: row.get(5)?,
+            model_description: row.get(6)?,
             labels: Vec::new(),
-            selected: row.get(6)?,
-            trashed_at: row.get(7)?,
+            selected: row.get(7)?,
+            trashed_at: row.get(8)?,
         })
     })?;
     let mut items = rows.collect::<std::result::Result<Vec<_>, _>>()?;

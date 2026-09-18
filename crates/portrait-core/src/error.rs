@@ -101,6 +101,8 @@ pub enum CoreError {
     InvalidMetadataLabel,
     #[error("The requested source is not in the open library.")]
     SourceNotFound,
+    #[error("The model analysis is invalid: {0}")]
+    InvalidModelAnalysis(String),
     #[error(
         "The duplicate review is stale or contains portraits that are no longer exact active duplicates."
     )]
@@ -163,6 +165,7 @@ impl CoreError {
             Self::MetadataNameRequiresSinglePortrait => "METADATA_NAME_REQUIRES_SINGLE_PORTRAIT",
             Self::InvalidMetadataLabel => "METADATA_LABEL_INVALID",
             Self::SourceNotFound => "SOURCE_NOT_FOUND",
+            Self::InvalidModelAnalysis(_) => "MODEL_ANALYSIS_INVALID",
             Self::InvalidDuplicateConsolidation => "DUPLICATE_CONSOLIDATION_INVALID",
             Self::Io(_) => "FILESYSTEM_ERROR",
             Self::Database(_) => "DATABASE_ERROR",

@@ -143,3 +143,50 @@ To restore, close the current library from **Library ▾ → Close library**, th
 Portable backups exclude thumbnail caches, staging data, writer locks, machine-local export receipts/history, and app settings. Saved game destinations remain specific to this computer. Grid image size and preview visibility keep their existing local preferences when you restore another library. Game-ready export is separate: it writes playable portrait sets and excludes trash and library metadata.
 
 For external backup tools, first close the library in the app, then copy the complete library folder. Copying a live SQLite file and image directory separately can produce an inconsistent backup. Reopen and resolve any reported recovery issue before creating a portable backup. There is no cloud synchronization. Encrypted and multipart archives are unsupported. Restore uses the existing bounded archive reader (100,000 entries, 20 GiB total, 128 MiB per file) and needs temporary disk space beside the target for the extracted library. Backups also need temporary space beside the ZIP output.
+
+## Describe portraits with a local vision model
+
+Choose **Library → Describe portraits**. The default server is
+`http://lizard10.local:8080/v1/chat/completions`, using `gemma-4-26b-a4b` through
+[llama.cpp's chat completions API](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md#post-v1chatcompletions-openai-compatible-chat-completions-api). The endpoint and model can be changed in the
+dialog. Supply the path to a text file containing the API token, such as `.apikey`;
+the backend reads it directly. The token is never stored in the portrait library
+or included in backups. The repository ignores its root `.apikey` file.
+
+Select portraits using the existing search/filter and selection controls, then
+analyze **Selected active portraits**, or choose **All active portraits**. Only
+the large image is sent. Analysis is explicit, runs one portrait at a time, and
+can continue in the background while you browse. Reopen the dialog to see
+progress or stop the batch. Stopping waits for the current request to finish;
+completed results remain saved. Restarting normally skips analyzed portraits.
+Use the reanalysis checkbox to replace earlier model results.
+
+The model creates a visual description and suggested labels for apparent gender
+presentation, fantasy ancestry (`race`), class archetype, combat style, weapons,
+armor, and visible magic. Uncertain attributes should be omitted. These are
+visual suggestions, not established character lore. Model descriptions appear
+in the preview separately from your notes. Your notes and manually edited or
+removed labels are preserved during reanalysis.
+
+SQLite FTS indexes the descriptions alongside names, sources, and labels. For
+example, search for `red cloak` or `glowing staff`, then combine that search with
+source and label filters. Generated descriptions travel with library backups;
+server settings and the token file stay on the computer. Normal library use
+still works without a model server or network connection.
+
+Model labels are freeform category/value pairs, not a fixed vocabulary. The RPG
+categories above are suggestions; specific weapons, additional ancestries, and
+other useful visual tags are accepted. Descriptions have no application-level
+character limit, and the app does not impose a label-count limit. Blank labels
+are ignored. The model server controls its generation budget; the request still
+has a 120-second timeout.
+
+Analysis failures are recorded in `logs/analysis-errors.jsonl` inside the app's
+machine-local configuration folder (on Linux, normally
+`~/.config/dev.portraitmaker.pathfinder/`). Each entry contains the portrait and
+job IDs, timestamp, model, detailed error, and server response when available.
+The failure message gives the log path. API tokens are redacted, and image
+payloads and authorization headers are not logged. Logs are separate from the
+portable library and its backups. Old failures from before logging was added
+cannot be reconstructed; rerun with reanalysis unchecked to retry portraits
+without saved results.

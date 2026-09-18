@@ -52,6 +52,7 @@ export function PortraitPreview({ portrait, visible, assetUrl, onClose, onNaviga
       <button type="button" className="close-preview" onClick={onClose}>Close preview</button>
     </header>
     {portrait.description ? <p className="portrait-preview-description">{portrait.description}</p> : null}
+    {portrait.modelDescription ? <section className="portrait-model-description" aria-label="Model description"><h3>Model description</h3><p>{portrait.modelDescription}</p><small>Suggested from the large portrait. Fantasy ancestry and class may be uncertain.</small></section> : null}
     <div className="portrait-preview-labels" aria-label="Portrait labels">
       {portrait.labels.length ? portrait.labels.map((label) => <span key={`${label.category}:${label.value}`}>{label.category}: {label.value}</span>) : <span>No labels yet.</span>}
     </div>

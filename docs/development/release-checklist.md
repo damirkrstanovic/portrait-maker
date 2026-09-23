@@ -24,6 +24,9 @@ The command refuses an existing destination, generates only plain-color canonica
 
 ## Distribution
 
+- [ ] Include the root MIT `LICENSE` (configured as a Tauri bundle resource). Original project code is MIT; third-party components keep their own licenses.
+- [ ] Collect full copyright/license and applicable Apache NOTICE texts for the JavaScript and Rust code included in each binary. Retain the MPL source links in `THIRD_PARTY_NOTICES.md` and provide source for any modified MPL-covered files. Check source/relinking obligations for any bundled LGPL native libraries.
 - [ ] Preserve the final `THIRD_PARTY_NOTICES.md`, full libarchive notice, Unicode notice, and the exact codec notices for libraries copied into a final package. The current libarchive notice must retain its complete upstream wording, including the applicable compress-reader and BLAKE2 terms.
+- [ ] Publish from tracked source or clean CI output, not a ZIP of the development directory: `.apikey`, `.env*`, private portrait archives, generated logs, and local build output must stay private. Recheck new commits for credentials. Git history contains the author's name/email and the former private model-server hostname; removing current references does not erase history.
 - [ ] Sign Windows and notarize/sign macOS artifacts with release credentials. These are distribution operations and are intentionally absent from local checks.
 - [ ] Publish only after the completed platform evidence, package inspection, and game acceptance records are attached to the release.

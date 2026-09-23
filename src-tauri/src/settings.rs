@@ -74,12 +74,7 @@ impl SettingsStore {
     }
 
     pub(crate) fn analysis(&self) -> Result<crate::state::AnalysisSettings, AppError> {
-        let mut analysis = self.read()?.analysis;
-        // Correct the original default if it was already saved locally.
-        if analysis.endpoint == "http://lizard10:8080/v1/chat/completions" {
-            analysis.endpoint = crate::state::AnalysisSettings::default().endpoint;
-        }
-        Ok(analysis)
+        Ok(self.read()?.analysis)
     }
 
     pub(crate) fn remember_analysis(

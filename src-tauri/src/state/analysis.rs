@@ -35,7 +35,7 @@ pub struct AnalysisSettings {
 impl Default for AnalysisSettings {
     fn default() -> Self {
         Self {
-            endpoint: "http://lizard10.local:8080/v1/chat/completions".into(),
+            endpoint: "http://127.0.0.1:8080/v1/chat/completions".into(),
             model: "gemma-4-26b-a4b".into(),
             api_key_path: ".apikey".into(),
         }

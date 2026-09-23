@@ -4,6 +4,14 @@ An offline desktop library for Pathfinder: Kingmaker and Wrath of the Righteous 
 
 Import complete portrait sets from folders or archives, search and edit metadata, curate selections and trash, export game-ready portraits, and keep portable library backups.
 
+## License
+
+The project's original code is available under the [MIT License](LICENSE),
+which permits commercial use, modification, and redistribution while retaining
+the license notice. Dependencies and upstream test fixtures retain their own
+licenses; see [third-party notices](THIRD_PARTY_NOTICES.md). Imported portrait
+artwork is not covered by this project's license.
+
 ## Install and run
 
 Download the bundle for your platform from the [GitHub Actions artifacts](https://github.com/damirkrstanovic/portrait-maker/actions) or [Releases page](https://github.com/damirkrstanovic/portrait-maker/releases) when one is available. A released bundle includes the application itself; Rust and Node.js are only needed to build it from source.
@@ -147,7 +155,7 @@ For external backup tools, first close the library in the app, then copy the com
 ## Describe portraits with a local vision model
 
 Choose **Library → Describe portraits**. The default server is
-`http://lizard10.local:8080/v1/chat/completions`, using `gemma-4-26b-a4b` through
+`http://127.0.0.1:8080/v1/chat/completions`, using `gemma-4-26b-a4b` through
 [llama.cpp's chat completions API](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md#post-v1chatcompletions-openai-compatible-chat-completions-api). The endpoint and model can be changed in the
 dialog. Supply the path to a text file containing the API token, such as `.apikey`;
 the backend reads it directly. The token is never stored in the portrait library

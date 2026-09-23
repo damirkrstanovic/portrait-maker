@@ -4,7 +4,7 @@ import type { LibraryApi } from "../../lib/api";
 import type { Job } from "../../lib/contracts";
 import { AnalysisDialog } from "./AnalysisDialog";
 
-const settings = { endpoint: "http://lizard10.local:8080/v1/chat/completions", model: "gemma-4-26b-a4b", apiKeyPath: "/private/.apikey" };
+const settings = { endpoint: "http://127.0.0.1:8080/v1/chat/completions", model: "gemma-4-26b-a4b", apiKeyPath: "/private/.apikey" };
 const running: Job = { id: "analysis", state: "running", completed: 0, total: 3, message: "Analyzing portraits" };
 
 test("starts an explicit selected-only batch and refreshes the catalog after completion", async () => {
